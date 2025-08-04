@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClickUp Team Performance Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .dashboard-header h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-header .date-time {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timeline-card {
+            grid-column: 1 / -1;
+            min-height: 400px;
+        }
+
+        .timeline-container {
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .member-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .member-name {
+            width: 150px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .timeline-bar {
+            flex: 1;
+            height: 30px;
+            position: relative;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .activity-segment {
+            position: absolute;
+            height: 100%;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .active-segment {
+            background: linear-gradient(45deg, #28a745, #34ce57);
+        }
+
+        .downtime-segment {
+            background: linear-gradient(45deg, #dc3545, #e74c3c);
+        }
+
+        .warning-segment {
+            background: linear-gradient(45deg, #ffc107, #f39c12);
+        }
+
+        .critical-segment {
+            background: linear-gradient(45deg, #6c757d, #495057);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .stats-panel {
+            background: #2c3e50;
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stats-section {
+            margin-bottom: 20px;
+        }
+
+        .stats-section h3 {
+            color: #3498db;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .stats-item {
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .alerts-panel {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-good { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-critical { background: #dc3545; }
+
+        .time-axis {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .hourly-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .hourly-member {
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        .hourly-bar {
+            display: flex;
+            height: 25px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .hour-segment {
+            flex: 1;
+            margin: 1px;
+            border-radius: 2px;
+        }
+
+        .activity-0 { background: #f8f9fa; }
+        .activity-25 { background: #ffeaa7; }
+        .activity-50 { background: #fdcb6e; }
+        .activity-75 { background: #e17055; }
+        .activity-100 { background: #00b894; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>🎯 ClickUp Team Performance Dashboard</h1>
+            <div class="date-time" id="currentDateTime"></div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Main Timeline Card -->
+            <div class="card timeline-card">
+                <div class="card-title">
+                    ⚡ Team Activity Timeline
+                </div>
+                <div class="timeline-container" id="timelineContainer">
+                    <!-- Timeline will be populated by JavaScript -->
+                </div>
+                <div class="time-axis" id="timeAxis">
+                    <!-- Time axis will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Status Overview -->
+            <div class="card">
+                <div class="card-title">
+                    📊 Team Status Overview
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusPieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Status Bars -->
+            <div class="card">
+                <div class="card-title">
+                    ⚡ Member Status Bars
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Statistics Panel -->
+            <div class="card">
+                <div class="card-title">
+                    📈 Statistics Panel
+                </div>
+                <div class="stats-panel" id="statsPanel">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Hourly Activity -->
+            <div class="card">
+                <div class="card-title">
+                    📅 Hourly Activity Distribution
+                </div>
+                <div class="hourly-grid" id="hourlyGrid">
+                    <!-- Hourly activity will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="alerts-panel" id="alertsPanel">
+            <h2>🚨 PRIORITY ALERTS</h2>
+            <div id="alertsList">
+                <!-- Alerts will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="refreshDashboard()">
+            🔄 Refresh Dashboard
+        </button>
+    </div>
+
+    <script>
+        // Data structure matching your Python code - replace this with actual data from your backend
+        let dashboardData = {
+            timestamp: "2024-01-15T16:30:00.000Z",
+            date: "2024-01-15",
+            detailed_data: {}
+        };
+
+        // Function to load data from your Python backend
+        function loadDataFromPython(data) {
+            // This function should be called with the data object from your Python code
+            // Example: loadDataFromPython(your_python_data_object)
+            dashboardData = data;
+            refreshDashboard();
+        }
+
+        let statusPieChart, statusBarChart;
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = 
+                `📅 ${now.toLocaleDateString()} | 🕐 ${now.toLocaleTimeString()}`;
+        }
+
+        // Safe datetime parsing function matching your Python code
+        function safeDatetimeFromIso(isoString) {
+            try {
+                return new Date(isoString);
+            } catch (error) {
+                console.error('Error parsing datetime:', isoString, error);
+                return new Date();
+            }
+        }
+
+        function calculateMemberStats(memberData) {
+            // Calculate total downtime and active time matching your Python logic
+            const totalDowntime = memberData.downtime_periods.reduce((sum, period) => sum + period.duration_hours, 0);
+            const totalActive = memberData.in_progress_periods.reduce((sum, period) => sum + period.duration_hours, 0);
+            
+            // Status calculation matching your Python code logic
+            let status = 'good';
+            if (totalDowntime >= 4) status = 'critical';  // Critical threshold as in Python
+            else if (totalDowntime >= 3) status = 'warning';  // Warning threshold as in Python
+            
+            return { totalDowntime, totalActive, status };
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineContainer');
+            const timeAxis = document.getElementById('timeAxis');
+            
+            container.innerHTML = '';
+            
+            // Check if we have data
+            if (!dashboardData.detailed_data || Object.keys(dashboardData.detailed_data).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>📊 No Data Available</h3><p>Please load data from your Python backend using loadDataFromPython(data)</p></div>';
+                return;
+            }
+
+            // Parse current time and start time matching your Python logic
+            const currentTime = safeDatetimeFromIso(dashboardData.timestamp);
+            const startTime = new Date(currentTime);
+            startTime.setHours(9, 0, 0, 0); // 9 AM start as in Python code
+            
+            const startHour = 9;
+            const endHour = Math.min(currentTime.getHours() + 1, 19); // Cap at 7 PM as in Python
+            const totalHours = endHour - startHour;
+            
+            // Generate time axis
+            const timeLabels = [];
+            for (let i = startHour; i <= endHour; i++) {
+                timeLabels.push(`${i.toString().padStart(2, '0')}:00`);
+            }
+            timeAxis.innerHTML = timeLabels.map(label => `<span>${label}</span>`).join('');
+            
+            Object.entries(dashboardData.detailed_data).forEach(([memberName, memberData]) => {
+                const memberRow = document.createElement('div');
+                memberRow.className = 'member-row';
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'member-name';
+                const stats = calculateMemberStats(memberData);
+                const statusDot = stats.status === 'good' ? '🟢' : stats.status === 'warning' ? '🟡' : '🔴';
+                nameDiv.textContent = `${statusDot} ${memberName}`;
+                
+                const timelineBar = document.createElement('div');
+                timelineBar.className = 'timeline-bar';
+                
+                // Add active periods matching Python logic
+                memberData.in_progress_periods.forEach(period => {
+                    const periodStart = safeDatetimeFromIso(period.start);
+                    const periodEnd = period.end === dashboardData.timestamp ? currentTime : safeDatetimeFromIso(period.end);
+                    
+                    const startPercent = ((periodStart.getHours() + periodStart.getMinutes()/60) - startHour) / totalHours * 100;
+                    const duration = period.duration_hours; // Use the duration_hours from your data
+                    const widthPercent = duration / totalHours * 100;
+                    
+                    if (startPercent >= 0 && startPercent <= 100) { // Only show if within visible range
+                        const segment = document.createElement('div');
+                        segment.className = 'activity-segment active-segment';
+                        segment.style.left = `${Math.max(0, startPercent)}%`;
+                        segment.style.width = `${Math.min(widthPercent, 100 - startPercent)}%`;
+                        
+                        // Task name truncation matching Python logic
+                        const taskName = period.task_name.length > 25 ? 
+                            period.task_name.substring(0, 25) + '...' : period.task_name;
+                        segment.textContent = taskName;
+                        segment.title = `${period.task_name} (${duration.toFixed(1)}h)`;
+                        
+                        timelineBar.appendChild(segment);
+                    }
+                });
+                
+                // Add downtime periods with color coding matching Python logic
+                memberData.downtime_periods.forEach(period => {
+                    const periodStart = safeDatetimeFromIso(period.start);
+                    const periodEnd = period.end === dashboardData.timestamp ? currentTime : safeDatetimeFromIso(period.end);
+                    
+                    const startPercent = ((periodStart.getHours() + periodStart.getMinutes()/60) - startHour) / totalHours * 100;
+                    const duration = period.duration_hours; // Use the duration_hours from your data
+                    const widthPercent = duration / totalHours * 100;
+                    
+                    if (startPercent >= 0 && startPercent <= 100) { // Only show if within visible range
+                        const segment = document.createElement('div');
+                        
+                        // Color based on duration matching your Python logic
+                        let segmentClass = 'warning-segment';  // Default for moderate
+                        if (duration >= 6) {
+                            segmentClass = 'critical-segment';  // Very severe (6+ hours)
+                        } else if (duration >= 4) {
+                            segmentClass = 'downtime-segment';  // Severe (4-6 hours)
+                        }
+                        
+                        segment.className = `activity-segment ${segmentClass}`;
+                        segment.style.left = `${Math.max(0, startPercent)}%`;
+                        segment.style.width = `${Math.min(widthPercent, 100 - startPercent)}%`;
+                        
+                        // Alert text matching Python format
+                        let durationText = `[ALERT] ${duration.toFixed(1)}h`;
+                        if (period.end === dashboardData.timestamp) {
+                            durationText += ' (NOW)';
+                        }
+                        
+                        segment.textContent = durationText;
+                        segment.title = `Downtime: ${duration.toFixed(1)} hours`;
+                        
+                        timelineBar.appendChild(segment);
+                    }
+                });
+                
+                memberRow.appendChild(nameDiv);
+                memberRow.appendChild(timelineBar);
+                container.appendChild(memberRow);
+            });
+        }
+
+        function renderStatusCharts() {
+            const memberStats = {};
+            Object.entries(dashboardData.detailed_data).forEach(([member, data]) => {
+                memberStats[member] = calculateMemberStats(data);
+            });
+            
+            // Status Pie Chart
+            const statusCounts = { good: 0, warning: 0, critical: 0 };
+            Object.values(memberStats).forEach(stats => {
+                statusCounts[stats.status]++;
+            });
+            
+            if (statusPieChart) statusPieChart.destroy();
+            
+            const pieCtx = document.getElementById('statusPieChart').getContext('2d');
+            statusPieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['🟢 Good', '🟡 Warning', '🔴 Critical'],
+                    datasets: [{
+                        data: [statusCounts.good, statusCounts.warning, statusCounts.critical],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+            
+            // Status Bar Chart
+            if (statusBarChart) statusBarChart.destroy();
+            
+            const barCtx = document.getElementById('statusBarChart').getContext('2d');
+            const members = Object.keys(memberStats);
+            const downtimeData = members.map(member => memberStats[member].totalDowntime);
+            const colors = members.map(member => {
+                const status = memberStats[member].status;
+                return status === 'good' ? '#28a745' : status === 'warning' ? '#ffc107' : '#dc3545';
+            });
+            
+            statusBarChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: members.map(name => name.split(' ')[0]), // First name only
+                    datasets: [{
+                        label: 'Downtime Hours',
+                        data: downtimeData,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Hours' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderStatsPanel() {
+            const memberStats = {};
+            Object.entries(dashboardData.detailed_data).forEach(([member, data]) => {
+                memberStats[member] = calculateMemberStats(data);
+            });
+            
+            const totalMembers = Object.keys(memberStats).length;
+            const goodCount = Object.values(memberStats).filter(s => s.status === 'good').length;
+            const warningCount = Object.values(memberStats).filter(s => s.status === 'warning').length;
+            const criticalCount = Object.values(memberStats).filter(s => s.status === 'critical').length;
+            
+            const totalDowntime = Object.values(memberStats).reduce((sum, stats) => sum + stats.totalDowntime, 0);
+            const totalActive = Object.values(memberStats).reduce((sum, stats) => sum + stats.totalActive, 0);
+            const avgDowntime = totalDowntime / totalMembers;
+            
+            const statsHtml = `
+                <div class="stats-section">
+                    <h3>📊 TEAM STATISTICS</h3>
+                    <div class="stats-item">👥 Total Members: ${totalMembers}</div>
+                    <div class="stats-item">🟢 Good Status: ${goodCount}</div>
+                    <div class="stats-item">🟡 Warning Status: ${warningCount}</div>
+                    <div class="stats-item">🔴 Critical Status: ${criticalCount}</div>
+                </div>
+                <div class="stats-section">
+                    <h3>⏱️ TIMING ANALYSIS</h3>
+                    <div class="stats-item">🕐 Current Time: ${new Date().toLocaleTimeString()}</div>
+                    <div class="stats-item">📅 Analysis Date: ${dashboardData.date}</div>
+                    <div class="stats-item">⚡ Total Team Active: ${totalActive.toFixed(1)}h</div>
+                    <div class="stats-item">⬇️ Total Team Downtime: ${totalDowntime.toFixed(1)}h</div>
+                    <div class="stats-item">📈 Avg Downtime/Person: ${avgDowntime.toFixed(1)}h</div>
+                </div>
+            `;
+            
+            document.getElementById('statsPanel').innerHTML = statsHtml;
+        }
+
+        function renderHourlyActivity() {
+            const container = document.getElementById('hourlyGrid');
+            container.innerHTML = '';
+            
+            const hours = Array.from({length: 9}, (_, i) => i + 9); // 9 AM to 5 PM
+            
+            Object.entries(dashboardData.detailed_data).forEach(([memberName, memberData]) => {
+                const memberDiv = document.createElement('div');
+                memberDiv.className = 'hourly-member';
+                memberDiv.textContent = memberName.split(' ')[0];
+                
+                const barDiv = document.createElement('div');
+                barDiv.className = 'hourly-bar';
+                
+                hours.forEach(hour => {
+                    const segment = document.createElement('div');
+                    segment.className = 'hour-segment';
+                    
+                    // Calculate activity level for this hour
+                    let activityLevel = 0;
+                    memberData.in_progress_periods.forEach(period => {
+                        const startTime = new Date(period.start);
+                        const endTime = new Date(period.end);
+                        
+                        if (startTime.getHours() <= hour && endTime.getHours() >= hour) {
+                            activityLevel = 100;
+                        }
+                    });
+                    
+                    segment.className += ` activity-${activityLevel}`;
+                    segment.title = `${hour}:00 - ${activityLevel}% active`;
+                    
+                    barDiv.appendChild(segment);
+                });
+                
+                container.appendChild(memberDiv);
+                container.appendChild(barDiv);
+            });
+        }
+
+        function renderAlerts() {
+            if (!dashboardData.detailed_data || Object.keys(dashboardData.detailed_data).length === 0) {
+                document.getElementById('alertsList').innerHTML = '<div class="alert-item">📊 No data loaded - waiting for Python backend data</div>';
+                return;
+            }
+
+            const memberStats = {};
+            Object.entries(dashboardData.detailed_data).forEach(([member, data]) => {
+                memberStats[member] = calculateMemberStats(data);
+            });
+            
+            const alerts = [];
+            const currentTime = safeDatetimeFromIso(dashboardData.timestamp);
+            
+            // Generate alerts based on analysis matching your Python logic
+            const criticalMembers = Object.entries(memberStats)
+                .filter(([_, stats]) => stats.status === 'critical')
+                .map(([member, _]) => member);
+            
+            if (criticalMembers.length > 0) {
+                alerts.push(`[SOS] CRITICAL: ${criticalMembers.length} member(s) with 4+ hours downtime: ${criticalMembers.join(', ')}`);
+            }
+            
+            // Find currently inactive members (matching Python logic)
+            const currently_inactive = [];
+            Object.entries(dashboardData.detailed_data).forEach(([member, memberData]) => {
+                memberData.downtime_periods.forEach(period => {
+                    const periodEnd = period.end === dashboardData.timestamp ? currentTime : safeDatetimeFromIso(period.end);
+                    
+                    // Within 5 minutes (300 seconds) as in Python code
+                    if (Math.abs((periodEnd - currentTime)) < 300000) { // 300000 ms = 5 minutes
+                        currently_inactive.push(member);
+                    }
+                });
+            });
+            
+            if (currently_inactive.length > 0) {
+                alerts.push(`[FIRE] IMMEDIATE: ${currently_inactive.length} member(s) currently inactive: ${currently_inactive.join(', ')}`);
+            }
+            
+            const warningCount = Object.values(memberStats).filter(s => s.status === 'warning').length;
+            const totalMembers = Object.keys(memberStats).length;
+            
+            if (warningCount > totalMembers * 0.5) {
+                alerts.push(`[WARN] TEAM ISSUE: Over 50% of team has significant downtime`);
+            }
+            
+            const avgDowntime = Object.values(memberStats).reduce((sum, stats) => sum + stats.totalDowntime, 0) / totalMembers;
+            if (avgDowntime > 4) {
+                alerts.push(`[DOWN] PRODUCTIVITY: Team average downtime is ${avgDowntime.toFixed(1)} hours`);
+            }
+            
+            if (alerts.length === 0) {
+                alerts.push('[OK] ALL CLEAR: No critical issues detected');
+            }
+            
+            // Show top 4 alerts as in Python code
+            const alertsHtml = alerts.slice(0, 4).map(alert => 
+                `<div class="alert-item">${alert}</div>`
+            ).join('');
+            
+            document.getElementById('alertsList').innerHTML = alertsHtml;
+        }
+
+        function refreshDashboard() {
+            // Update timestamp
+            dashboardData.timestamp = new Date().toISOString();
+            dashboardData.date = new Date().toLocaleDateString();
+            
+            // Re-render all components
+            updateDateTime();
+            renderTimeline();
+            renderStatusCharts();
+            renderStatsPanel();
+            renderHourlyActivity();
+            renderAlerts();
+            
+            console.log('Dashboard refreshed at:', new Date().toLocaleTimeString());
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            // Only refresh if we have data
+            if (dashboardData.detailed_data && Object.keys(dashboardData.detailed_data).length > 0) {
+                refreshDashboard();
+            } else {
+                // Show placeholder content
+                renderTimeline();
+                renderAlerts();
+            }
+            
+            // Auto-refresh every 30 seconds
+            setInterval(updateDateTime, 1000);
+            setInterval(() => {
+                if (dashboardData.detailed_data && Object.keys(dashboardData.detailed_data).length > 0) {
+                    refreshDashboard();
+                }
+            }, 30000);
+        });
+
+        // Function to update data (call this when you receive new data from your backend)
+        function updateDashboardData(newData) {
+            dashboardData = newData;
+            refreshDashboard();
+        }
+
+        // Example of how to integrate with your Python code:
+        /*
+        // In your Python code, after generating the data:
+        data = {
+            'timestamp': current_time.isoformat(),
+            'date': current_time.strftime('%Y-%m-%d'),
+            'detailed_data': detailed_data  // Your existing detailed_data dictionary
+        }
+        
+        // Then pass this data to the frontend:
+        // 1. Via AJAX/Fetch API call
+        // 2. Via WebSocket connection  
+        // 3. Via template rendering
+        // 4. Via file export/import
+        
+        // Call: loadDataFromPython(data) or updateDashboardData(data)
+        */
+
+//         instuction
+
+//         Perfect! Now the dashboard is fully aligned with your Python code. Here are the key changes I made to match your exact data structure and logic:
+// 🎯 Exact Python Code Integration:
+// Data Structure Matching:
+
+// detailed_data now expects the exact format from your Python code
+// duration_hours is used directly from your data (not calculated)
+// timestamp and date fields match your Python format
+// Safe datetime parsing function mirrors your safe_datetime_from_iso()
+
+// Logic Alignment:
+
+// Status thresholds: Critical = 4+ hours, Warning = 3+ hours (matching your Python logic)
+// Color coding: 6+ hours = critical (dark gray), 4-6 hours = severe (red), 3-4 hours = moderate (yellow)
+// Timeline rendering: Uses 9 AM start time, caps at 7 PM, handles current time properly
+// Alert generation: Matches your Python alert logic exactly (currently inactive detection, team productivity warnings)
+
+// Integration Methods:
+// Option 1 - Direct Data Passing:
+// python# In your Python code, after creating the data:
+// data = {
+//     'timestamp': current_time.isoformat(),
+//     'date': date_string,
+//     'detailed_data': detailed_data  # Your existing dictionary
+// }
+
+// # Pass to frontend via your preferred method
+// Option 2 - AJAX Integration:
+// javascript// Call this function with your Python data
+// loadDataFromPython(your_python_data);
+// Option 3 - WebSocket Real-time:
+// javascript// For real-time updates
+// updateDashboardData(live_data_from_python);
+// Key Features Now Matching Python Code:
+
+// ✅ Exact duration calculations using your duration_hours field
+// ✅ Task name truncation (25 characters + "..." as in Python)
+// ✅ Alert formatting with [ALERT], [SOS], [FIRE] prefixes
+// ✅ Color thresholds exactly matching your severity levels
+// ✅ Currently inactive detection (within 5 minutes logic)
+// ✅ Statistics calculations matching your Python metrics
+
+// The dashboard will now show a "No Data Available" message until you load data from your Python backend using loadDataFromPython(data). This ensures it only displays when you have real ClickUp data to visualize!
+
+    </script>
+</body>
+</html>

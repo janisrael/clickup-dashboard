@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SourceSelect Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        {% include 'components/header.html' %}
+        
+        <div class="dashboard-controls">
+            {% include 'components/date-picker.html' %}
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="clickup">ClickUp Analytics</div>
+            <div class="tab" data-tab="projects">Project Tracker</div>
+            <div class="tab" data-tab="websites">Website Tracker</div>
+            <div class="tab" data-tab="calendar">Calendar</div>
+        </div>
+
+        <div class="loading" id="loadingScreen">
+            <div class="spinner"></div>
+            <p>Analyzing team performance...</p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorText">Error loading dashboard data</span>
+        </div>
+
+        <div class="tab-content active" id="clickupTab">
+            {% include 'components/kpi-cards.html' %}
+            {% include 'components/charts.html' %}
+            {% include 'components/alerts.html' %}
+            {% include 'components/member-grid.html' %}
+        </div>
+
+        <div class="tab-content" id="projectsTab">
+            {% include 'components/projects-table.html' %}
+        </div>
+
+        <div class="tab-content" id="websitesTab">
+            {% include 'components/website-grid.html' %}
+        </div>
+
+        <div class="tab-content" id="calendarTab">
+            {% include 'components/calendar.html' %}
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn secondary" onclick="window.dashboard.exportData()" title="Export Data">
+                <i class="fas fa-download"></i>
+            </button>
+            <button class="action-btn" onclick="window.dashboard.refreshData()" title="Refresh Dashboard">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="{{ url_for('static', filename='js/dashboard/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard/date-picker.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard/main.js') }}"></script>
+</body>
+</html>

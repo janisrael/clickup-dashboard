@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClickUp Team Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            /* max-width: 1400px; */
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            margin-top: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .stat-card.success::before { background: linear-gradient(45deg, #28a745, #20c997); }
+        .stat-card.warning::before { background: linear-gradient(45deg, #ffc107, #fd7e14); }
+        .stat-card.danger::before { background: linear-gradient(45deg, #dc3545, #e83e8c); }
+        .stat-card.info::before { background: linear-gradient(45deg, #17a2b8, #6f42c1); }
+
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+
+        .stat-card.success .stat-icon { color: #28a745; }
+        .stat-card.warning .stat-icon { color: #ffc107; }
+        .stat-card.danger .stat-icon { color: #dc3545; }
+        .stat-card.info .stat-icon { color: #17a2b8; }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            margin-bottom: 30px;
+            height: 400px; /* Fixed height for all charts */
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .secondary-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .alerts-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .alert-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .alert-item:hover {
+            transform: translateX(5px);
+        }
+
+        .alert-critical {
+            background: rgba(220, 53, 69, 0.1);
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .member-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .member-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border-top: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .member-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .member-card.status-good { border-top-color: #28a745; }
+        .member-card.status-warning { border-top-color: #ffc107; }
+        .member-card.status-critical { border-top-color: #dc3545; }
+
+        .member-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .member-stats {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+        }
+
+        .export-btn {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: linear-gradient(45deg, #20c997, #28a745);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .export-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .success-message {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .secondary-charts {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .chart-container {
+                height: auto;
+                min-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> ClickUp Team Analytics Dashboard</h1>
+            <p id="lastUpdated">Loading analytics data...</p>
+        </div>
+
+        <div class="loading" id="loadingScreen">
+            <div class="spinner"></div>
+            <p>Analyzing team performance...</p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorText">Error loading dashboard data</span>
+        </div>
+
+        <div id="dashboardContent" style="display: none;">
+            <!-- Key Performance Indicators -->
+            <div class="stats-grid">
+                <div class="stat-card success">
+                    <i class="fas fa-users stat-icon"></i>
+                    <div class="stat-value" id="totalMembers">0</div>
+                    <div class="stat-label">Total Members</div>
+                </div>
+                
+                <div class="stat-card info">
+                    <i class="fas fa-clock stat-icon"></i>
+                    <div class="stat-value" id="activeHours">0h</div>
+                    <div class="stat-label">Total Active Hours</div>
+                </div>
+                
+                <div class="stat-card warning">
+                    <i class="fas fa-exclamation-triangle stat-icon"></i>
+                    <div class="stat-value" id="downtimeHours">0h</div>
+                    <div class="stat-label">Total Downtime</div>
+                </div>
+                
+                <div class="stat-card danger">
+                    <i class="fas fa-user-slash stat-icon"></i>
+                    <div class="stat-value" id="inactiveMembers">0</div>
+                    <div class="stat-label">Currently Inactive</div>
+                </div>
+            </div>
+
+            <!-- Main Timeline Chart -->
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-timeline"></i>
+                    Team Activity Timeline
+                </div>
+                <canvas id="timelineChart"></canvas>
+            </div>
+
+            <!-- Secondary Charts -->
+            <div class="secondary-charts">
+                <!-- Activity vs Downtime Chart -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-balance-scale"></i>
+                        Active vs Downtime Hours
+                    </div>
+                    <canvas id="activityChart"></canvas>
+                </div>
+
+                <!-- Team Status Distribution -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-pie-chart"></i>
+                        Team Status Distribution
+                    </div>
+                    <canvas id="statusChart"></canvas>
+                </div>
+
+                <!-- Hourly Activity Heatmap -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-fire"></i>
+                        Hourly Activity Distribution
+                    </div>
+                    <canvas id="heatmapChart"></canvas>
+                </div>
+
+                <!-- Downtime Categories -->
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Downtime Categories
+                    </div>
+                    <canvas id="downtimeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="alerts-section">
+                <div class="chart-title">
+                    <i class="fas fa-bell"></i>
+                    Priority Alerts
+                </div>
+                <div id="alertsContainer">
+                    <!-- Alerts will be populated here -->
+                </div>
+            </div>
+
+            <!-- Team Member Status Grid -->
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-users-cog"></i>
+                    Team Member Status
+                </div>
+                <div class="member-status-grid" id="memberStatusGrid">
+                    <!-- Member cards will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="refreshDashboard()" title="Refresh Dashboard">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        
+        <button class="export-btn" onclick="exportDashboard()" title="Export Dashboard Data">
+            <i class="fas fa-download"></i>
+        </button>
+    </div>
+
+    <script>
+        // Global variables for charts
+        let timelineChart, activityChart, statusChart, heatmapChart, downtimeChart;
+        let resizeTimer;
+        
+        // Chart color schemes
+        const colors = {
+            active: '#28a745',
+            downtime: '#dc3545',
+            warning: '#ffc107',
+            info: '#17a2b8',
+            purple: '#6f42c1',
+            teal: '#20c997'
+        };
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate loading with sample data
+            setTimeout(() => {
+                loadDashboardData(getSampleData());
+                showContent();
+            }, 1500);
+        });
+
+        function showLoading() {
+            document.getElementById('loadingScreen').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingScreen').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+            hideLoading();
+        }
+
+        function showContent() {
+            document.getElementById('dashboardContent').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            hideLoading();
+        }
+
+        async function loadDashboard() {
+            showLoading();
+            
+            try {
+                // In a real implementation, you would fetch from your API
+                const response = await fetch('/api/dashboard-data');
+                const data = await response.json();
+                
+                // For demo purposes, we'll use sample data
+                // const data = getSampleData();
+                
+                loadDashboardData(data);
+                showContent();
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError('Failed to load dashboard data. Please check your connection and try again.');
+            }
+        }
+
+        function loadDashboardData(data) {
+            cleanupCharts();
+            updateKPIs(data);
+            createTimelineChart(data);
+            createActivityChart(data);
+            createStatusChart(data);
+            createHeatmapChart(data);
+            createDowntimeChart(data);
+            updateAlerts(data);
+            updateMemberStatus(data);
+            updateLastUpdated(data);
+        }
+
+        function cleanupCharts() {
+            if (timelineChart) {
+                timelineChart.destroy();
+                timelineChart = null;
+            }
+            if (activityChart) {
+                activityChart.destroy();
+                activityChart = null;
+            }
+            if (statusChart) {
+                statusChart.destroy();
+                statusChart = null;
+            }
+            if (heatmapChart) {
+                heatmapChart.destroy();
+                heatmapChart = null;
+            }
+            if (downtimeChart) {
+                downtimeChart.destroy();
+                downtimeChart = null;
+            }
+        }
+
+        function updateKPIs(data) {
+            document.getElementById('totalMembers').textContent = data.members_analyzed || 0;
+            document.getElementById('activeHours').textContent = `${data.team_metrics?.total_active_hours?.toFixed(1) || 0}h`;
+            document.getElementById('downtimeHours').textContent = `${data.team_metrics?.total_downtime_hours?.toFixed(1) || 0}h`;
+            document.getElementById('inactiveMembers').textContent = data.team_metrics?.currently_inactive?.length || 0;
+        }
+
+        function createTimelineChart(data) {
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            
+            const members = Object.keys(data.detailed_data || {});
+            if (members.length === 0) {
+                drawNoDataMessage(ctx, 'No timeline data available');
+                return;
+            }
+
+            const datasets = [];
+
+            // Create datasets for active and downtime periods
+            members.forEach((member, index) => {
+                const memberData = data.detailed_data[member];
+                
+                // Active periods
+                (memberData.in_progress_periods || []).forEach(period => {
+                    const start = new Date(period.start);
+                    const end = new Date(period.end);
+                    
+                    datasets.push({
+                        label: `${member} - Active`,
+                        data: [{
+                            x: start.getTime(),
+                            y: index,
+                            x2: end.getTime(),
+                            duration: period.duration_hours,
+                            task: period.task_name
+                        }],
+                        backgroundColor: colors.active,
+                        borderColor: colors.active,
+                        borderWidth: 8,
+                        pointRadius: 0,
+                        showLine: false
+                    });
+                });
+
+                // Downtime periods
+                (memberData.downtime_periods || []).forEach(period => {
+                    const start = new Date(period.start);
+                    const end = new Date(period.end);
+                    
+                    datasets.push({
+                        label: `${member} - Downtime`,
+                        data: [{
+                            x: start.getTime(),
+                            y: index,
+                            x2: end.getTime(),
+                            duration: period.duration_hours,
+                            type: period.type
+                        }],
+                        backgroundColor: colors.downtime,
+                        borderColor: colors.downtime,
+                        borderWidth: 8,
+                        pointRadius: 0,
+                        showLine: false
+                    });
+                });
+            });
+
+            timelineChart = new Chart(ctx, {
+                type: 'scatter',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time of Day'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            min: -0.5,
+                            max: members.length - 0.5,
+                            ticks: {
+                                callback: function(value) {
+                                    return members[Math.round(value)] || '';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Team Members'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].dataset.label;
+                                },
+                                label: function(context) {
+                                    const data = context.raw;
+                                    const start = new Date(data.x);
+                                    const end = new Date(data.x2);
+                                    let label = `Duration: ${data.duration?.toFixed(1) || 0} hours`;
+                                    if (data.task) {
+                                        label += `\nTask: ${data.task}`;
+                                    }
+                                    if (data.type) {
+                                        label += `\nType: ${data.type}`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createActivityChart(data) {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            
+            const members = Object.keys(data.detailed_data || {});
+            if (members.length === 0) {
+                drawNoDataMessage(ctx, 'No activity data available');
+                return;
+            }
+
+            // Prepare data more efficiently
+            const activeHours = members.map(member => {
+                const memberData = data.detailed_data[member];
+                return (memberData.in_progress_periods || []).reduce((sum, period) => 
+                    sum + (period.duration_hours || 0), 0);
+            });
+
+            const downtimeHours = members.map(member => {
+                const memberData = data.detailed_data[member];
+                return (memberData.downtime_periods || []).reduce((sum, period) => 
+                    sum + (period.duration_hours || 0), 0);
+            });
+
+            // Calculate max value for y-axis with padding
+            const maxValue = Math.max(...activeHours, ...downtimeHours) * 1.2;
+
+            activityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: members,
+                    datasets: [
+                        {
+                            label: 'Active Hours',
+                            data: activeHours,
+                            backgroundColor: colors.active,
+                            borderColor: colors.active,
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Downtime Hours',
+                            data: downtimeHours,
+                            backgroundColor: colors.downtime,
+                            borderColor: colors.downtime,
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: maxValue || 10,
+                            title: {
+                                display: true,
+                                text: 'Hours'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw.toFixed(1)} hours`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createStatusChart(data) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            
+            const members = Object.keys(data.detailed_data || {});
+            if (members.length === 0) {
+                drawNoDataMessage(ctx, 'No status data available');
+                return;
+            }
+
+            let goodCount = 0, warningCount = 0, criticalCount = 0;
+
+            members.forEach(member => {
+                const memberData = data.detailed_data[member];
+                const totalDowntime = (memberData.downtime_periods || []).reduce((sum, period) => sum + (period.duration_hours || 0), 0);
+                
+                if (totalDowntime >= 4) {
+                    criticalCount++;
+                } else if (totalDowntime >= 3) {
+                    warningCount++;
+                } else {
+                    goodCount++;
+                }
+            });
+
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Good', 'Warning', 'Critical'],
+                    datasets: [{
+                        data: [goodCount, warningCount, criticalCount],
+                        backgroundColor: [colors.active, colors.warning, colors.downtime],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const value = context.raw;
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createHeatmapChart(data) {
+            const ctx = document.getElementById('heatmapChart').getContext('2d');
+            
+            const members = Object.keys(data.detailed_data || {});
+            if (members.length === 0) {
+                drawNoDataMessage(ctx, 'No activity data available');
+                return;
+            }
+
+            // Create hourly activity data
+            const hours = Array.from({length: 9}, (_, i) => i + 9); // 9 AM to 5 PM
+            const heatmapData = [];
+
+            members.forEach((member, memberIndex) => {
+                hours.forEach((hour, hourIndex) => {
+                    const memberData = data.detailed_data[member];
+                    let activityLevel = 0;
+
+                    (memberData.in_progress_periods || []).forEach(period => {
+                        const start = new Date(period.start);
+                        const end = new Date(period.end);
+                        
+                        if (start.getHours() <= hour && end.getHours() >= hour) {
+                            activityLevel = Math.min(1, activityLevel + 0.5);
+                        }
+                    });
+
+                    heatmapData.push({
+                        x: hour,
+                        y: memberIndex,
+                        v: activityLevel
+                    });
+                });
+            });
+
+            heatmapChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Activity Level',
+                        data: heatmapData,
+                        backgroundColor: function(context) {
+                            const value = context.parsed.v || 0;
+                            const alpha = Math.max(0.1, value);
+                            return `rgba(40, 167, 69, ${alpha})`;
+                        },
+                        pointRadius: 15,
+                        pointHoverRadius: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            min: 8.5,
+                            max: 17.5,
+                            ticks: {
+                                callback: function(value) {
+                                    return `${Math.round(value)}:00`;
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Hour of Day'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            min: -0.5,
+                            max: members.length - 0.5,
+                            ticks: {
+                                callback: function(value) {
+                                    return members[Math.round(value)] || '';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Team Members'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const member = members[Math.round(context[0].parsed.y)];
+                                    const hour = Math.round(context[0].parsed.x);
+                                    return `${member} at ${hour}:00`;
+                                },
+                                label: function(context) {
+                                    const level = context.parsed.v || 0;
+                                    return `Activity Level: ${(level * 100).toFixed(0)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDowntimeChart(data) {
+            const ctx = document.getElementById('downtimeChart').getContext('2d');
+            
+            const downtimeTypes = {};
+            
+            Object.values(data.detailed_data || {}).forEach(memberData => {
+                (memberData.downtime_periods || []).forEach(period => {
+                    const type = period.type || 'unknown';
+                    downtimeTypes[type] = (downtimeTypes[type] || 0) + (period.duration_hours || 0);
+                });
+            });
+
+            const typeLabels = {
+                'no_activity_all_day': 'No Activity All Day',
+                'no_tasks': 'No Tasks Assigned',
+                'late_start': 'Late Start',
+                'midday_gap': 'Midday Gap',
+                'current_inactive': 'Currently Inactive'
+            };
+
+            const labels = Object.keys(downtimeTypes).map(type => typeLabels[type] || type);
+            const values = Object.values(downtimeTypes);
+
+            if (values.length === 0 || values.every(v => v === 0)) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = colors.active;
+                ctx.textAlign = 'center';
+                ctx.fillText('🎉 No Downtime Detected!', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            downtimeChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            colors.downtime,
+                            colors.warning,
+                            colors.info,
+                            colors.purple,
+                            colors.teal
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const hours = context.parsed;
+                                    const total = values.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((hours / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${hours.toFixed(1)}h (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawNoDataMessage(ctx, message) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText(message, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+
+        async function updateAlerts(data) {
+            const alertsContainer = document.getElementById('alertsContainer');
+            alertsContainer.innerHTML = '';
+
+            try {
+                // In a real implementation, you would fetch from your API
+                // const response = await fetch('/api/alerts');
+                // const alertData = await response.json();
+                // const alerts = alertData.alerts || [];
+                
+                // For demo purposes, we'll generate alerts based on the data
+                const alerts = [];
+                
+                // Check for inactive members
+                if (data.team_metrics?.currently_inactive?.length > 0) {
+                    alerts.push({
+                        type: 'critical',
+                        message: `${data.team_metrics.currently_inactive.length} team members currently inactive`
+                    });
+                }
+                
+                // Check for high downtime
+                if (data.team_metrics?.total_downtime_hours > 10) {
+                    alerts.push({
+                        type: 'warning',
+                        message: `High total downtime: ${data.team_metrics.total_downtime_hours.toFixed(1)} hours`
+                    });
+                }
+                
+                if (alerts.length === 0) {
+                    alertsContainer.innerHTML = `
+                        <div class="alert-item alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            <span>✅ All Clear: No critical issues detected</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    const alertElement = document.createElement('div');
+                    alertElement.className = `alert-item alert-${alert.type}`;
+                    
+                    const iconClass = {
+                        'critical': 'fas fa-exclamation-circle',
+                        'warning': 'fas fa-exclamation-triangle',
+                        'success': 'fas fa-check-circle'
+                    }[alert.type] || 'fas fa-info-circle';
+
+                    alertElement.innerHTML = `
+                        <i class="${iconClass}"></i>
+                        <span>${alert.message}</span>
+                    `;
+                    
+                    alertsContainer.appendChild(alertElement);
+                });
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+                alertsContainer.innerHTML = `
+                    <div class="alert-item alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>⚠️ Unable to load alerts</span>
+                    </div>
+                `;
+            }
+        }
+
+        function updateMemberStatus(data) {
+            const memberStatusGrid = document.getElementById('memberStatusGrid');
+            memberStatusGrid.innerHTML = '';
+
+            const members = Object.keys(data.detailed_data || {});
+            
+            if (members.length === 0) {
+                memberStatusGrid.innerHTML = '<p>No team member data available</p>';
+                return;
+            }
+            
+            members.forEach(member => {
+                const memberData = data.detailed_data[member];
+                const totalActive = (memberData.in_progress_periods || []).reduce((sum, period) => sum + (period.duration_hours || 0), 0);
+                const totalDowntime = (memberData.downtime_periods || []).reduce((sum, period) => sum + (period.duration_hours || 0), 0);
+                
+                let status = 'good';
+                let statusText = 'Good';
+                let statusIcon = 'fas fa-check-circle';
+                
+                if (totalDowntime >= 4) {
+                    status = 'critical';
+                    statusText = 'Critical';
+                    statusIcon = 'fas fa-exclamation-circle';
+                } else if (totalDowntime >= 3) {
+                    status = 'warning';
+                    statusText = 'Warning';
+                    statusIcon = 'fas fa-exclamation-triangle';
+                }
+
+                const memberCard = document.createElement('div');
+                memberCard.className = `member-card status-${status}`;
+                
+                const isCurrentlyInactive = (data.team_metrics?.currently_inactive || []).includes(member);
+                
+                memberCard.innerHTML = `
+                    <div class="member-name">
+                        <i class="${statusIcon}"></i>
+                        ${member.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </div>
+                    <div class="member-stats">
+                        <div>Status: <strong>${statusText}</strong></div>
+                        <div>Active: ${totalActive.toFixed(1)}h</div>
+                        <div>Downtime: ${totalDowntime.toFixed(1)}h</div>
+                        ${isCurrentlyInactive ? 
+                            '<div style="color: #dc3545;"><strong>Currently Inactive</strong></div>' : ''}
+                    </div>
+                `;
+                
+                memberStatusGrid.appendChild(memberCard);
+            });
+        }
+
+        function updateLastUpdated(data) {
+            const lastUpdated = document.getElementById('lastUpdated');
+            if (data.timestamp) {
+                const updateTime = new Date(data.timestamp);
+                lastUpdated.textContent = `Last updated: ${updateTime.toLocaleDateString()} at ${updateTime.toLocaleTimeString()}`;
+            } else {
+                lastUpdated.textContent = 'Last updated: Unknown';
+            }
+        }
+
+        async function refreshDashboard() {
+            showLoading();
+            document.getElementById('loadingScreen').innerHTML = `
+                <div class="spinner"></div>
+                <p>Refreshing data...</p>
+                <div class="progress-text" id="refreshProgress"></div>
+            `;
+            try {
+                // 1. Trigger refresh on backend
+                const refreshResponse = await fetch('/api/refresh');
+                
+                if (!refreshResponse.ok) {
+                    throw new Error('Refresh failed');
+                }
+
+                // 2. Wait for refresh to complete (1.5 seconds)
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // 3. Load the fresh data
+                const dataResponse = await fetch('/api/dashboard-data');
+                
+                if (!dataResponse.ok) {
+                    throw new Error('Failed to get updated data');
+                }
+
+                const data = await dataResponse.json();
+                
+                // 4. Update the dashboard
+                loadDashboardData(data);
+                showContent();
+                
+            } catch (error) {
+                console.error('Refresh error:', error);
+                
+                // Try to load whatever data we can get
+                try {
+                    const fallbackResponse = await fetch('/api/dashboard-data');
+                    if (fallbackResponse.ok) {
+                        const fallbackData = await fallbackResponse.json();
+                        loadDashboardData(fallbackData);
+                    } else {
+                        // If even fallback fails, show sample data
+                        loadDashboardData(data());
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback failed:', fallbackError);
+                    loadDashboardData(data());
+                }
+                
+                showContent();
+                showError('Refresh failed - showing possibly stale data');
+            }
+        }
+
+        function exportDashboard() {
+            try {
+                // In a real implementation, you would fetch from your API
+                const response = fetch('/api/export');
+                const data = response.json();
+                
+                // For demo purposes, we'll use sample data
+                // const data = getSampleData();
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], {
+                    type: 'application/json'
+                });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `clickup-dashboard-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('Error exporting dashboard:', error);
+                alert('Failed to export dashboard data');
+            }
+        }
+
+        function getSampleData() {
+            // Generate sample data with realistic values
+            const members = ['John_Doe', 'Jane_Smith', 'Mike_Johnson', 'Sarah_Williams', 'David_Brown'];
+            const detailedData = {};
+            
+            members.forEach(member => {
+                const hasDowntime = Math.random() > 0.3;
+                const downtimePeriods = [];
+                
+                if (hasDowntime) {
+                    const downtimeTypes = ['no_activity_all_day', 'no_tasks', 'late_start', 'midday_gap'];
+                    const type = downtimeTypes[Math.floor(Math.random() * downtimeTypes.length)];
+                    
+                    downtimePeriods.push({
+                        start: `2025-08-02T${9 + Math.floor(Math.random() * 4)}:00:00`,
+                        end: `2025-08-02T${13 + Math.floor(Math.random() * 4)}:00:00`,
+                        duration_hours: 1 + Math.random() * 3,
+                        type: type
+                    });
+                }
+                
+                detailedData[member] = {
+                    in_progress_periods: [
+                        {
+                            start: `2025-08-02T09:00:00`,
+                            end: `2025-08-02T17:00:00`,
+                            duration_hours: 8 - (hasDowntime ? 2 : 0),
+                            task_name: 'Project Task ' + (1 + Math.floor(Math.random() * 100))
+                        }
+                    ],
+                    downtime_periods: downtimePeriods
+                };
+            });
+            
+            return {
+                analysis_time: "23:41:24",
+                date: "2025-08-02",
+                detailed_data: detailedData,
+                downtime_members: Math.random() > 0.7 ? [members[Math.floor(Math.random() * members.length)]] : [],
+                members_analyzed: members.length,
+                members_with_downtime: members.filter(m => detailedData[m].downtime_periods.length > 0).length,
+                team_metrics: {
+                    currently_inactive: Math.random() > 0.8 ? [members[Math.floor(Math.random() * members.length)]] : [],
+                    team_efficiency: 80 + Math.random() * 20,
+                    total_active_hours: members.length * 7,
+                    total_downtime_hours: members.length * 1.5
+                },
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(async () => {
+            try {
+                await loadDashboard();
+            } catch (error) {
+                console.error('Auto-refresh failed:', error);
+            }
+        }, 5 * 60 * 1000);
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.key === 'r') {
+                event.preventDefault();
+                refreshDashboard();
+            }
+        });
+
+        // Add responsive chart resizing with debounce
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (timelineChart) timelineChart.resize();
+                if (activityChart) activityChart.resize();
+                if (statusChart) statusChart.resize();
+                if (heatmapChart) heatmapChart.resize();
+                if (downtimeChart) downtimeChart.resize();
+            }, 250);
+        });
+    </script>
+</body>
+</html>

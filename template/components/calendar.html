@@ -1,0 +1,25 @@
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-title">
+            <i class="fas fa-calendar-alt"></i>
+            <span id="calendarMonthYear">August 2025</span>
+        </div>
+        <div class="calendar-nav">
+            <button class="chart-btn" onclick="window.dashboard.prevMonth()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="chart-btn" onclick="window.dashboard.nextMonth()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button class="chart-btn" onclick="window.dashboard.goToToday()">
+                Today
+            </button>
+        </div>
+    </div>
+    <div class="calendar-grid" id="calendarDayHeaders">
+        <!-- Day headers will be populated here -->
+    </div>
+    <div class="calendar-grid" id="calendarDays">
+        <!-- Calendar days will be populated here -->
+    </div>
+</div>

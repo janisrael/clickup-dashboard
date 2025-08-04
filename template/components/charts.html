@@ -1,0 +1,66 @@
+<div class="grid-2-col">
+    <div class="chart-container">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fas fa-timeline"></i>
+                Team Activity Timeline
+            </div>
+            <div class="chart-actions">
+                <button class="chart-btn" onclick="zoomChart('timelineChart', 'hour')">Hour</button>
+                <button class="chart-btn" onclick="zoomChart('timelineChart', 'day')">Day</button>
+            </div>
+        </div>
+        <canvas id="timelineChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fas fa-balance-scale"></i>
+                Active vs Downtime
+            </div>
+        </div>
+        <canvas id="activityChart"></canvas>
+    </div>
+</div>
+
+<div class="grid-3-col">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-hourglass-half"></i>
+                Task Age Distribution
+            </div>
+        </div>
+        <div id="taskAgeChartContainer">
+            <canvas id="taskAgeChart"></canvas>
+        </div>
+        <div id="taskAgeList" style="margin-top: 16px;"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-user-check"></i>
+                Team Status
+            </div>
+        </div>
+        <div id="statusChartContainer">
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div id="inactiveMembers" style="margin-top: 16px;"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-flag-checkered"></i>
+                Milestone Progress
+            </div>
+        </div>
+        <div id="milestoneContainer">
+            <canvas id="milestoneChart"></canvas>
+        </div>
+        <div id="milestoneStats" style="margin-top: 16px;"></div>
+    </div>
+</div>
