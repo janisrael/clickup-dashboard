@@ -1,0 +1,138 @@
+<div class="charts-section">
+    <div class="chart-container full-width">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fas fa-chart-gantt"></i>
+                [CHART] Team Activity Timeline - <span id="timelineDate">{{ current_date }}</span>
+            </div>
+            <div class="chart-subtitle">
+                Real-time analysis of team member activity and downtime periods
+            </div>
+        </div>
+        <div class="chart-wrapper timeline">
+            <canvas id="timelineChart"></canvas>
+        </div>
+        <div class="timeline-legend">
+            <div class="legend-item">
+                <span class="legend-color" style="background: #22c55e;"></span>
+                [GREEN] Active Period
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #fbbf24;"></span>
+                [YELLOW] Moderate Downtime (3-4h)
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #ef4444;"></span>
+                [RED] Severe Downtime (4-6h)
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #000000;"></span>
+                [BLACK] Critical Downtime (6+h)
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-3-col">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    [LIGHTNING] Current Member Status
+                </div>
+            </div>
+            <div class="chart-wrapper small">
+                <canvas id="memberStatusChart"></canvas>
+            </div>
+            <div id="memberStatusList" class="status-list"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-chart-pie"></i>
+                    [TARGET] Team Status
+                </div>
+            </div>
+            <div class="chart-wrapper small">
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div id="statusBreakdown" class="status-breakdown"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-chart-area"></i>
+                    [TREND] Hourly Activity Distribution
+                </div>
+            </div>
+            <div class="chart-wrapper small">
+                <canvas id="activityTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2-col">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-clock"></i>
+                    [TIMER] Timing Analysis
+                </div>
+            </div>
+            <div class="timing-stats">
+                <div class="timing-item">
+                    <span class="timing-label">[CLOCK] Current Time:</span>
+                    <span class="timing-value" id="currentTime">--:--</span>
+                </div>
+                <div class="timing-item">
+                    <span class="timing-label">[CALENDAR] Analysis Date:</span>
+                    <span class="timing-value" id="analysisDateDetail">----------</span>
+                </div>
+                <div class="timing-item">
+                    <span class="timing-label">[LIGHTNING] Total Team Active:</span>
+                    <span class="timing-value" id="totalActiveTime">--h</span>
+                </div>
+                <div class="timing-item">
+                    <span class="timing-label">[DOWN] Total Team Downtime:</span>
+                    <span class="timing-value" id="totalDowntimeDetail">--h</span>
+                </div>
+                <div class="timing-item">
+                    <span class="timing-label">[TREND] Avg Downtime/Person:</span>
+                    <span class="timing-value" id="avgDowntime">--h</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-chart-bar"></i>
+                    [CHART] Team Statistics
+                </div>
+            </div>
+            <div class="team-stats">
+                <div class="stat-row">
+                    <span class="stat-label">[USERS] Total Members:</span>
+                    <span class="stat-value" id="totalMembers">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">[OK] Active Status:</span>
+                    <span class="stat-value" id="activeMembers">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">[WARN] Warning Status:</span>
+                    <span class="stat-value" id="warningMembers">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">[SOS] Critical Status:</span>
+                    <span class="stat-value" id="criticalMembers">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">[FIRE] Currently Inactive:</span>
+                    <span class="stat-value" id="inactiveCount">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
