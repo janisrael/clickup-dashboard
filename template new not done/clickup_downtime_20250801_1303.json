@@ -1,0 +1,114 @@
+{
+  "timestamp": "2025-08-01T13:03:32.351390",
+  "date": "2025-08-01",
+  "analysis_time": "13:03:32",
+  "members_analyzed": 8,
+  "members_with_downtime": 4,
+  "downtime_members": [
+    "Rick Schmaltz",
+    "Tricia Kennedy",
+    "Calum Sproat-Panabaker",
+    "Sean Coulombe"
+  ],
+  "detailed_data": {
+    "Rick Schmaltz": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "duration_hours": 4.0589864972222225,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Kendra Richards": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-01 11:04:03.478000",
+          "end": "2025-08-01 13:03:32.351390",
+          "task_name": "Tea Towels, MH Stampede Grounds Concepts, Pen Mockups",
+          "duration_hours": 1.9913537194444444
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Tricia Kennedy": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "duration_hours": 4.0589864972222225,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Calum Sproat-Panabaker": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "duration_hours": 4.0589864972222225,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Sean Coulombe": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "duration_hours": 4.0589864972222225,
+          "type": "no_tasks"
+        }
+      ]
+    },
+    "Arif": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "task_name": "create responsive content sizes, create __pre variables and values, Design And Implementation, Content Integration",
+          "duration_hours": 4.0589864972222225
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Wiktor": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "task_name": "Responsivines, Revision & Corrections",
+          "duration_hours": 4.0589864972222225
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Jan": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-01 09:00:00",
+          "end": "2025-08-01 13:03:32.351390",
+          "task_name": "Organization payment, MileStone(Organizer side), MileStone(P1 MVP), Add Delete ticket capability",
+          "duration_hours": 4.0589864972222225
+        }
+      ],
+      "downtime_periods": []
+    }
+  },
+  "team_metrics": {
+    "total_active_hours": 14.168313211111112,
+    "total_downtime_hours": 16.23594598888889,
+    "team_efficiency": 46.59976458532202,
+    "currently_inactive": [
+      "Rick Schmaltz",
+      "Tricia Kennedy",
+      "Calum Sproat-Panabaker",
+      "Sean Coulombe"
+    ]
+  }
+}

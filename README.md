@@ -1,12 +1,43 @@
 📁 Your Project Structure:
 
 your_project/
-├── clickup_dashboard.py (Updated backend)
+├── clickup_dashboard.py (Backend - already created)
 ├── template/
-│   └── dashboard.html (Updated dashboard template)
+│   ├── dashboard.html (Main template)
+│   └── components/
+│       ├── header.html
+│       ├── date-picker.html
+│       ├── kpi-cards.html
+│       ├── charts.html
+│       ├── alerts.html
+│       ├── member-grid.html
+│       ├── projects-table.html
+│       ├── website-grid.html
+│       └── calendar.html
 └── static/
     ├── css/
+    │   └── dashboard.css (Already created)
     └── js/
+        └── dashboard/
+            ├── utils.js
+            ├── api.js
+            ├── date-picker.js
+            ├── charts.js
+            └── main.js
+
+api call clickup, sample with date
+
+curl -X GET \
+  'https://api.clickup.com/api/v2/team/9013605091/task?assignees[]=126127973&include_closed=false&due_date=1753891200000' \
+  -H 'Authorization: pk_126127973_ULPZ9TEC7TGPGAP3WVCA2KWOQQGV3Y4K'
+
+should be like 
+
+const date = new Date('2025-07-31');
+const timestamp = date.getTime(); // Returns the timestamp in milliseconds
+console.log(timestamp);
+
+
 
 SETUP INSTRUCTIONS:
 

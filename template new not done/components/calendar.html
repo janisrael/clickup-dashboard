@@ -1,0 +1,37 @@
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-title">
+            <i class="fas fa-calendar-alt"></i>
+            Team Calendar
+        </div>
+        <div class="calendar-controls">
+            <button class="calendar-btn" onclick="window.calendar.previousMonth()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="calendar-month" id="calendarMonth">January 2025</span>
+            <button class="calendar-btn" onclick="window.calendar.nextMonth()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    <div class="calendar-wrapper">
+        <div class="calendar-weekdays">
+            <div class="weekday">Sun</div>
+            <div class="weekday">Mon</div>
+            <div class="weekday">Tue</div>
+            <div class="weekday">Wed</div>
+            <div class="weekday">Thu</div>
+            <div class="weekday">Fri</div>
+            <div class="weekday">Sat</div>
+        </div>
+        <div class="calendar-days" id="calendarDays">
+            <!-- Calendar days will be populated here -->
+        </div>
+    </div>
+    <div class="calendar-events">
+        <h4 class="events-title">Upcoming Events</h4>
+        <div id="upcomingEvents" class="events-list">
+            <!-- Events will be populated here -->
+        </div>
+    </div>
+</div>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Team Activity Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 40px;
+    }
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+    }
+    canvas {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    select {
+      display: block;
+      margin: 20px auto;
+      padding: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Team Activity Report</h2>
+    <select id="chartTypeSelector">
+      <option value="horizontal-stacked">Horizontal Stacked Bar</option>
+      <option value="vertical-stacked">Vertical Stacked Bar</option>
+      <option value="grouped-bar">Grouped Bar</option>
+    </select>
+    <canvas id="activityChart"></canvas>
+  </div>
+
+  <script>
+    let chartInstance;
+
+    function createChart(type, labels, activeData, downtimeData) {
+      const ctx = document.getElementById('activityChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.destroy(); // Destroy existing chart before re-rendering
+      }
+
+      let config = {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: []
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} hrs`
+              }
+            }
+          },
+          scales: {
+            x: {},
+            y: {}
+          }
+        }
+      };
+
+      if (type === 'horizontal-stacked') {
+        config.options.indexAxis = 'y';
+        config.data.datasets = [
+          {
+            label: 'Active Hours',
+            data: activeData,
+            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+            stack: 'stack1'
+          },
+          {
+            label: 'Downtime Hours',
+            data: downtimeData,
+            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+            stack: 'stack1'
+          }
+        ];
+        config.options.scales = {
+          x: { stacked: true, title: { display: true, text: 'Hours' }},
+          y: { stacked: true }
+        };
+      } else if (type === 'vertical-stacked') {
+        config.data.datasets = [
+          {
+            label: 'Active Hours',
+            data: activeData,
+            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+            stack: 'stack1'
+          },
+          {
+            label: 'Downtime Hours',
+            data: downtimeData,
+            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+            stack: 'stack1'
+          }
+        ];
+        config.options.scales = {
+          x: { stacked: true },
+          y: { stacked: true, title: { display: true, text: 'Hours' }}
+        };
+      } else if (type === 'grouped-bar') {
+        config.data.datasets = [
+          {
+            label: 'Active Hours',
+            data: activeData,
+            backgroundColor: 'rgba(75, 192, 192, 0.8)'
+          },
+          {
+            label: 'Downtime Hours',
+            data: downtimeData,
+            backgroundColor: 'rgba(255, 99, 132, 0.8)'
+          }
+        ];
+        config.options.scales = {
+          x: { title: { display: true, text: 'Team Members' }},
+          y: { title: { display: true, text: 'Hours' }}
+        };
+      }
+
+      chartInstance = new Chart(ctx, config);
+    }
+
+    // Load data and initialize chart
+    let reportLabels = [];
+    let activeData = [];
+    let downtimeData = [];
+
+   fetch('clickup_downtime_20250801_1307.json')
+  .then(response => response.json())
+  .then(reportData => {
+    console.log('Report Data:', reportData);
+
+    const detailedData = reportData.detailed_data;
+
+    const reportLabels = Object.keys(detailedData);
+
+    const activeData = reportLabels.map(name => {
+      const periods = detailedData[name].in_progress_periods || [];
+      const totalActive = periods.reduce((sum, period) => sum + period.duration_hours, 0);
+      return totalActive;
+    });
+
+    const downtimeData = reportLabels.map(name => {
+      const periods = detailedData[name].downtime_periods || [];
+      const totalDowntime = periods.reduce((sum, period) => sum + period.duration_hours, 0);
+      return totalDowntime;
+    });
+
+    // Save these for the dropdown to work later
+    window.reportLabels = reportLabels;
+    window.activeData = activeData;
+    window.downtimeData = downtimeData;
+
+    // Default chart
+    createChart('horizontal-stacked', reportLabels, activeData, downtimeData);
+  })
+  .catch(error => console.error('Error loading data.json:', error));
+
+// Dropdown listener
+document.getElementById('chartTypeSelector').addEventListener('change', function () {
+  const selectedType = this.value;
+  createChart(selectedType, window.reportLabels, window.activeData, window.downtimeData);
+});
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+{
+  "timestamp": "2025-07-30T13:39:55.193344",
+  "date": "2025-07-30",
+  "analysis_time": "13:39:55",
+  "members_analyzed": 8,
+  "members_with_downtime": 6,
+  "downtime_members": [
+    "Rick Schmaltz",
+    "Kendra Richards",
+    "Tricia Kennedy",
+    "Calum Sproat-Panabaker",
+    "Sean Coulombe",
+    "Arif"
+  ],
+  "detailed_data": {
+    "Rick Schmaltz": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "duration_hours": 4.665331484444445,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Kendra Richards": {
+      "in_progress_periods": [
+        {
+          "start": "2025-07-30 13:36:18.500000",
+          "end": "2025-07-30 13:39:55.193344",
+          "task_name": "Stickers, Shirt Mockups",
+          "duration_hours": 0.060192595555555554
+        }
+      ],
+      "downtime_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:36:18.500000",
+          "duration_hours": 4.605138888888889,
+          "type": "late_start"
+        }
+      ]
+    },
+    "Tricia Kennedy": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "duration_hours": 4.665331484444445,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Calum Sproat-Panabaker": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "duration_hours": 4.665331484444445,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Sean Coulombe": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "duration_hours": 4.665331484444445,
+          "type": "no_tasks"
+        }
+      ]
+    },
+    "Arif": {
+      "in_progress_periods": [],
+      "downtime_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "duration_hours": 4.665331484444445,
+          "type": "no_activity_all_day"
+        }
+      ]
+    },
+    "Wiktor": {
+      "in_progress_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "task_name": "Revision & Corrections, New Menu",
+          "duration_hours": 4.665331484444445
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Jan": {
+      "in_progress_periods": [
+        {
+          "start": "2025-07-30 09:00:00",
+          "end": "2025-07-30 13:39:55.193344",
+          "task_name": "organization - live event details, Organization -ledger, Organization payment, MileStone(P1 MVP), Add Delete ticket capability, MileStone(Organizer side)",
+          "duration_hours": 4.665331484444445
+        }
+      ],
+      "downtime_periods": []
+    }
+  },
+  "team_metrics": {
+    "total_active_hours": 9.390855564444445,
+    "total_downtime_hours": 27.931796311111114,
+    "team_efficiency": 25.16127630950838,
+    "currently_inactive": [
+      "Rick Schmaltz",
+      "Kendra Richards",
+      "Tricia Kennedy",
+      "Calum Sproat-Panabaker",
+      "Sean Coulombe",
+      "Arif"
+    ]
+  }
+}
