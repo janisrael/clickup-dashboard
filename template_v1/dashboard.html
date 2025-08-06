@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,70 +6,1573 @@
     <title>SourceSelect Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+    <style>
+        /* Enhanced CSS with better structure */
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --border-color: #334155;
+            --card-bg: #1e293b;
+            --card-hover: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+        }
+
+        .header-content h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-content p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 16px;
+        }
+
+        .data-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Date Controls */
+        .dashboard-controls {
+            margin-bottom: 32px;
+        }
+
+        .date-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .date-picker-container {
+            position: relative;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .date-picker {
+            width: 100%;
+            padding: 12px 48px 12px 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .date-picker:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .date-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .date-quick-select {
+            display: flex;
+            gap: 8px;
+        }
+
+        .quick-date-btn {
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .quick-date-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .quick-date-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 16px 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            background: transparent;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 2px 2px 0 0;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        }
+
+        .kpi-icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+
+        .kpi-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .kpi-subtext {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Timeline Chart Enhanced */
+        .timeline-container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid var(--border-color);
+            margin-bottom: 32px;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .timeline-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .timeline-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .timeline-btn {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-btn:hover,
+        .timeline-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Task Timeline - New Structure */
+        .task-timeline {
+            min-height: 600px;
+            position: relative;
+        }
+
+        .member-section {
+            margin-bottom: 32px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .member-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .member-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .member-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Task Rows */
+        .task-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .task-row {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 16px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .task-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .task-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .task-meta {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .project-name {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .task-status {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-progress {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-staging {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--info);
+        }
+
+        /* Timeline Bar */
+        .timeline-bar {
+            position: relative;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .time-ruler {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            height: 16px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+        }
+
+        .time-block {
+            position: absolute;
+            top: 4px;
+            height: 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .time-block:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .time-block.active {
+            background: linear-gradient(135deg, var(--success), #059669);
+        }
+
+        .time-block.downtime {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+        }
+
+        .time-block.break {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+        }
+
+        /* No Activity State */
+        .no-activity {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-tertiary);
+            font-style: italic;
+        }
+
+        /* Grid Layouts */
+        .grid-3-col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Member Grid */
+        .member-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .member-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .member-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .member-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .member-card-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .member-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .member-card-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .member-stat {
+            text-align: center;
+        }
+
+        .member-stat-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+
+        .member-stat-value {
+            display: block;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .action-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s ease;
+            font-size: 1.25rem;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .action-btn.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        /* Loading and Error States */
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            margin-top: 16px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 16px;
+            }
+            
+            .header-content h1 {
+                font-size: 2rem;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .task-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .member-stats {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
-        {% include 'components/header.html' %}
-        
-        <div class="dashboard-controls">
-            {% include 'components/date-picker.html' %}
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-chart-line"></i> SourceSelect Dashboard</h1>
+                <p id="lastUpdated">Loading analytics data...</p>
+                <div class="data-status">
+                    <div class="status-indicator"></div>
+                    <span>Live Data</span>
+                </div>
+            </div>
         </div>
 
+        <!-- Date Controls -->
+        <div class="dashboard-controls">
+            <div class="date-picker-wrapper">
+                <div class="date-picker-container">
+                    <input type="text" id="datePicker" class="date-picker" placeholder="Select Date">
+                    <i class="fas fa-calendar-alt date-icon"></i>
+                </div>
+                <div class="date-quick-select">
+                    <button class="quick-date-btn" data-days="-1">Yesterday</button>
+                    <button class="quick-date-btn active" data-days="0">Today</button>
+                    <button class="quick-date-btn" data-days="-7">Last Week</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
         <div class="tabs">
             <div class="tab active" data-tab="clickup">ClickUp Analytics</div>
             <div class="tab" data-tab="projects">Project Tracker</div>
             <div class="tab" data-tab="websites">Website Tracker</div>
-            <div class="tab" data-tab="calendar">Calendar</div>
         </div>
 
-        <div class="loading" id="loadingScreen">
+        <!-- Loading Screen -->
+        <div class="loading" id="loadingScreen" style="display: none;">
             <div class="spinner"></div>
             <p>Analyzing team performance...</p>
         </div>
 
+        <!-- Error Message -->
         <div id="errorMessage" class="error-message" style="display: none;">
             <i class="fas fa-exclamation-triangle"></i>
             <span id="errorText">Error loading dashboard data</span>
         </div>
 
+        <!-- Main Content -->
         <div class="tab-content active" id="clickupTab">
-            {% include 'components/kpi-cards.html' %}
-            {% include 'components/charts.html' %}
-            {% include 'components/alerts.html' %}
-            {% include 'components/member-grid.html' %}
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="kpi-label">TEAM MEMBERS</div>
+                    <div class="kpi-value" id="membersAnalyzed">0</div>
+                    <div class="kpi-subtext">Currently being tracked</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="kpi-label">ACTIVE HOURS</div>
+                    <div class="kpi-value" id="totalActiveHours">0.0h</div>
+                    <div class="kpi-subtext">of 7.5h per member expected</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="kpi-label">DOWNTIME</div>
+                    <div class="kpi-value" id="totalDowntime">0.0h</div>
+                    <div class="kpi-subtext">Total inactive periods</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="kpi-label">ACTIVE TASKS</div>
+                    <div class="kpi-value" id="activeTasks">0</div>
+                    <div class="kpi-subtext">Currently in progress</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="kpi-label">EFFICIENCY</div>
+                    <div class="kpi-value" id="teamEfficiency">0.0%</div>
+                    <div class="kpi-subtext">Active vs total working time</div>
+                </div>
+            </div>
+
+            <!-- Enhanced Timeline -->
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <div class="timeline-title">
+                        <i class="fas fa-chart-gantt"></i>
+                        Task-Level Team Timeline
+                        <span id="timelineDate" style="font-size: 0.875rem; color: var(--text-secondary);">Today</span>
+                    </div>
+                    <div class="timeline-controls">
+                        <button class="timeline-btn" onclick="zoomTimeline('morning')">
+                            <i class="fas fa-sun"></i> Morning
+                        </button>
+                        <button class="timeline-btn" onclick="zoomTimeline('afternoon')">
+                            <i class="fas fa-moon"></i> Afternoon
+                        </button>
+                        <button class="timeline-btn active" onclick="zoomTimeline('day')">
+                            <i class="fas fa-calendar-day"></i> Full Day
+                        </button>
+                    </div>
+                </div>
+                <div class="task-timeline" id="taskTimeline">
+                    <!-- Task timeline will be populated here -->
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid-3-col">
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Active vs Downtime
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-users"></i>
+                        Team Status
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        <i class="fas fa-tasks"></i>
+                        Task Distribution
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="taskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Members Grid -->
+            <div class="member-section">
+                <h3 style="margin-bottom: 20px; color: var(--text-primary);">
+                    <i class="fas fa-users"></i> Team Members
+                </h3>
+                <div class="member-grid" id="memberGrid">
+                    <!-- Member cards will be populated here -->
+                </div>
+            </div>
         </div>
 
-        <div class="tab-content" id="projectsTab">
-            {% include 'components/projects-table.html' %}
-        </div>
-
-        <div class="tab-content" id="websitesTab">
-            {% include 'components/website-grid.html' %}
-        </div>
-
-        <div class="tab-content" id="calendarTab">
-            {% include 'components/calendar.html' %}
-        </div>
-
+        <!-- Action Buttons -->
         <div class="action-buttons">
-            <button class="action-btn secondary" onclick="window.dashboard.exportData()" title="Export Data">
+            <button class="action-btn secondary" onclick="exportData()" title="Export Data">
                 <i class="fas fa-download"></i>
             </button>
-            <button class="action-btn" onclick="window.dashboard.refreshData()" title="Refresh Dashboard">
+            <button class="action-btn" onclick="refreshData()" title="Refresh Dashboard">
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="{{ url_for('static', filename='js/dashboard/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dashboard/api.js') }}"></script>
-    <!-- <script src="{{ url_for('static', filename='js/dashboard/theme.js') }}"></script> -->
-    <script src="{{ url_for('static', filename='js/dashboard/date-picker.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dashboard/charts.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dashboard/main.js') }}"></script>
+    
+    <script>
+        // Enhanced Dashboard JavaScript
+        class EnhancedDashboard {
+            constructor() {
+                this.currentData = null;
+                this.charts = {};
+                this.datePicker = null;
+                this.init();
+            }
+
+            init() {
+                this.setupDatePicker();
+                this.setupEventListeners();
+                this.loadData();
+                this.startAutoRefresh();
+            }
+
+            setupDatePicker() {
+                this.datePicker = flatpickr("#datePicker", {
+                    defaultDate: new Date(),
+                    dateFormat: "Y-m-d",
+                    maxDate: new Date(),
+                    onChange: (selectedDates, dateStr) => {
+                        this.loadData(dateStr);
+                        this.updateQuickButtons(dateStr);
+                    }
+                });
+
+                // Quick date buttons
+                document.querySelectorAll('.quick-date-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const days = parseInt(e.target.getAttribute('data-days'));
+                        const date = new Date();
+                        date.setDate(date.getDate() + days);
+                        this.datePicker.setDate(date);
+                        this.updateQuickButtons();
+                    });
+                });
+            }
+
+            setupEventListeners() {
+                // Tab switching
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => this.switchTab(e.target));
+                });
+            }
+
+            async loadData(date = null) {
+                this.showLoading(true);
+                
+                try {
+                    const selectedDate = date || new Date().toISOString().split('T')[0];
+                    
+                    // Simulate API call - replace with actual endpoint
+                    const response = await fetch(`/api/dashboard-data?date=${selectedDate}`);
+                    const data = await response.json();
+                    
+                    this.currentData = data;
+                    this.updateDashboard(data);
+                    this.updateLastUpdated();
+                    
+                } catch (error) {
+                    this.showError('Failed to load dashboard data');
+                    console.error('Load data error:', error);
+                    
+                    // Fallback to sample data for demo
+                    this.loadSampleData();
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            loadSampleData() {
+                // Sample data structure matching your ClickUp data
+                const sampleData = {
+                    timestamp: new Date().toISOString(),
+                    date: new Date().toISOString().split('T')[0],
+                    members_analyzed: 2,
+                    team_metrics: {
+                        total_active_hours: 15.0,
+                        total_downtime_hours: 0.0,
+                        expected_working_hours: 15.0,
+                        team_efficiency: 100.0,
+                        currently_inactive: [],
+                        total_tasks: 8,
+                        total_active_tasks: 8
+                    },
+                    detailed_data: {
+                        "Arif": {
+                            username: "Arif",
+                            total_tasks: 4,
+                            active_tasks: 4,
+                            total_active_hours: 7.5,
+                            total_downtime_hours: 0.0,
+                            in_progress_periods: [
+                                {
+                                    start: "2025-08-05T09:00:00",
+                                    end: "2025-08-05T12:30:00",
+                                    task_name: "create responsive content sizes",
+                                    task_id: "task_001",
+                                    duration_hours: 3.5,
+                                    status: "currently_active",
+                                    project_name: "Web Development",
+                                    list_name: "In Progress"
+                                },
+                                {
+                                    start: "2025-08-05T13:30:00",
+                                    end: "2025-08-05T17:00:00",
+                                    task_name: "Design And Implementation",
+                                    task_id: "task_002",
+                                    duration_hours: 3.5,
+                                    status: "currently_active",
+                                    project_name: "UI/UX Design",
+                                    list_name: "Development"
+                                },
+                                {
+                                    start: "2025-08-05T10:00:00",
+                                    end: "2025-08-05T11:30:00",
+                                    task_name: "Content Integration",
+                                    task_id: "task_003",
+                                    duration_hours: 1.5,
+                                    status: "currently_active",
+                                    project_name: "CMS Setup",
+                                    list_name: "Active Tasks"
+                                }
+                            ],
+                            downtime_periods: [],
+                            task_details: [
+                                {
+                                    id: "task_001",
+                                    name: "create responsive content sizes",
+                                    status: "in progress",
+                                    project_name: "Web Development",
+                                    list_name: "In Progress"
+                                },
+                                {
+                                    id: "task_002", 
+                                    name: "Design And Implementation",
+                                    status: "in progress",
+                                    project_name: "UI/UX Design",
+                                    list_name: "Development"
+                                },
+                                {
+                                    id: "task_003",
+                                    name: "Content Integration", 
+                                    status: "in progress",
+                                    project_name: "CMS Setup",
+                                    list_name: "Active Tasks"
+                                },
+                                {
+                                    id: "task_004",
+                                    name: "create __pre variables and values",
+                                    status: "staging",
+                                    project_name: "Frontend",
+                                    list_name: "Testing"
+                                }
+                            ]
+                        },
+                        "Jan": {
+                            username: "Jan",
+                            total_tasks: 4,
+                            active_tasks: 4,
+                            total_active_hours: 7.5,
+                            total_downtime_hours: 0.0,
+                            in_progress_periods: [
+                                {
+                                    start: "2025-08-05T09:00:00",
+                                    end: "2025-08-05T11:00:00",
+                                    task_name: "Organization payment",
+                                    task_id: "task_005",
+                                    duration_hours: 2.0,
+                                    status: "currently_active",
+                                    project_name: "Payment System",
+                                    list_name: "Backend"
+                                },
+                                {
+                                    start: "2025-08-05T11:30:00",
+                                    end: "2025-08-05T14:00:00",
+                                    task_name: "MileStone(Organizer side)",
+                                    task_id: "task_006",
+                                    duration_hours: 2.5,
+                                    status: "currently_active",
+                                    project_name: "Event Management",
+                                    list_name: "Features"
+                                },
+                                {
+                                    start: "2025-08-05T14:30:00",
+                                    end: "2025-08-05T17:00:00",
+                                    task_name: "Add Delete ticket capability",
+                                    task_id: "task_007",
+                                    duration_hours: 2.5,
+                                    status: "currently_active",
+                                    project_name: "Ticketing System",
+                                    list_name: "Core Features"
+                                },
+                                {
+                                    start: "2025-08-05T15:00:00",
+                                    end: "2025-08-05T16:30:00",
+                                    task_name: "MileStone(P1 MVP)",
+                                    task_id: "task_008",
+                                    duration_hours: 1.5,
+                                    status: "currently_active",
+                                    project_name: "MVP Development",
+                                    list_name: "Milestones"
+                                }
+                            ],
+                            downtime_periods: [],
+                            task_details: [
+                                {
+                                    id: "task_005",
+                                    name: "Organization payment",
+                                    status: "in progress",
+                                    project_name: "Payment System",
+                                    list_name: "Backend"
+                                },
+                                {
+                                    id: "task_006",
+                                    name: "MileStone(Organizer side)",
+                                    status: "in progress", 
+                                    project_name: "Event Management",
+                                    list_name: "Features"
+                                },
+                                {
+                                    id: "task_007",
+                                    name: "Add Delete ticket capability",
+                                    status: "in progress",
+                                    project_name: "Ticketing System",
+                                    list_name: "Core Features"
+                                },
+                                {
+                                    id: "task_008",
+                                    name: "MileStone(P1 MVP)",
+                                    status: "in progress",
+                                    project_name: "MVP Development", 
+                                    list_name: "Milestones"
+                                }
+                            ]
+                        }
+                    }
+                };
+                
+                this.currentData = sampleData;
+                this.updateDashboard(sampleData);
+            }
+
+            updateDashboard(data) {
+                this.updateKPIs(data.team_metrics);
+                this.createTaskTimeline(data.detailed_data);
+                this.createCharts(data);
+                this.updateMemberGrid(data.detailed_data);
+                this.updateTimelineDate();
+            }
+
+            updateKPIs(metrics) {
+                document.getElementById('membersAnalyzed').textContent = metrics.members_analyzed || 0;
+                document.getElementById('totalActiveHours').textContent = `${(metrics.total_active_hours || 0).toFixed(1)}h`;
+                document.getElementById('totalDowntime').textContent = `${(metrics.total_downtime_hours || 0).toFixed(1)}h`;
+                document.getElementById('activeTasks').textContent = metrics.total_active_tasks || 0;
+                document.getElementById('teamEfficiency').textContent = `${(metrics.team_efficiency || 0).toFixed(1)}%`;
+            }
+
+            createTaskTimeline(detailedData) {
+                const container = document.getElementById('taskTimeline');
+                container.innerHTML = '';
+
+                if (!detailedData || Object.keys(detailedData).length === 0) {
+                    container.innerHTML = '<div class="no-activity">No task data available</div>';
+                    return;
+                }
+
+                Object.entries(detailedData).forEach(([memberName, memberData]) => {
+                    const memberSection = this.createMemberSection(memberName, memberData);
+                    container.appendChild(memberSection);
+                });
+            }
+
+            createMemberSection(memberName, memberData) {
+                const section = document.createElement('div');
+                section.className = 'member-section';
+
+                const totalTasks = memberData.task_details ? memberData.task_details.length : 0;
+                const activeTasks = memberData.active_tasks || 0;
+                const activeHours = memberData.total_active_hours || 0;
+
+                section.innerHTML = `
+                    <div class="member-header">
+                        <div class="member-name">
+                            <i class="fas fa-user"></i>
+                            ${memberName}
+                        </div>
+                        <div class="member-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-tasks"></i>
+                                <span class="stat-value">${activeTasks}</span> active tasks
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-clock"></i>
+                                <span class="stat-value">${activeHours.toFixed(1)}h</span> active
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-list"></i>
+                                <span class="stat-value">${totalTasks}</span> total tasks
+                            </div>
+                        </div>
+                    </div>
+                    <div class="task-rows" id="tasks-${memberName}">
+                    </div>
+                `;
+
+                const taskRowsContainer = section.querySelector(`#tasks-${memberName}`);
+                
+                if (memberData.in_progress_periods && memberData.in_progress_periods.length > 0) {
+                    memberData.in_progress_periods.forEach(period => {
+                        const taskRow = this.createTaskRow(period);
+                        taskRowsContainer.appendChild(taskRow);
+                    });
+                } else if (memberData.task_details && memberData.task_details.length > 0) {
+                    // Show tasks even if no in_progress_periods
+                    memberData.task_details.slice(0, 4).forEach(task => {
+                        const mockPeriod = {
+                            task_name: task.name,
+                            project_name: task.project_name,
+                            list_name: task.list_name,
+                            status: task.status,
+                            start: "2025-08-05T09:00:00",
+                            end: "2025-08-05T17:00:00",
+                            duration_hours: 7.5
+                        };
+                        const taskRow = this.createTaskRow(mockPeriod);
+                        taskRowsContainer.appendChild(taskRow);
+                    });
+                } else {
+                    taskRowsContainer.innerHTML = '<div class="no-activity">No active tasks</div>';
+                }
+
+                return section;
+            }
+
+            createTaskRow(period) {
+                const row = document.createElement('div');
+                row.className = 'task-row';
+
+                const startTime = new Date(period.start);
+                const endTime = new Date(period.end);
+                const duration = period.duration_hours || 0;
+
+                // Calculate position and width for timeline bar (9 AM to 6 PM = 9 hours)
+                const workdayStart = 9; // 9 AM
+                const workdayHours = 9; // 9 hours total
+                const startHour = startTime.getHours() + startTime.getMinutes()/60;
+                const endHour = endTime.getHours() + endTime.getMinutes()/60;
+                
+                const leftPercent = Math.max(0, ((startHour - workdayStart) / workdayHours) * 100);
+                const widthPercent = Math.min(100 - leftPercent, ((endHour - startHour) / workdayHours) * 100);
+
+                const statusClass = period.status === 'staging' ? 'status-staging' : 'status-progress';
+
+                row.innerHTML = `
+                    <div class="task-info">
+                        <div class="task-name">${period.task_name || 'Unknown Task'}</div>
+                        <div class="task-meta">
+                            <span class="project-name">${period.project_name || 'Unknown Project'}</span> 
+                            • ${period.list_name || 'Unknown List'}
+                            <span class="task-status ${statusClass}">${period.status || 'active'}</span>
+                        </div>
+                    </div>
+                    <div class="timeline-bar">
+                        <div class="time-ruler">
+                            <span>9:00</span>
+                            <span>12:00</span>
+                            <span>15:00</span>
+                            <span>18:00</span>
+                        </div>
+                        <div class="time-block active" 
+                             style="left: ${leftPercent}%; width: ${widthPercent}%;"
+                             title="${period.task_name} (${duration.toFixed(1)}h)">
+                            ${duration.toFixed(1)}h
+                        </div>
+                    </div>
+                `;
+
+                return row;
+            }
+
+            createCharts(data) {
+                this.createActivityChart(data.team_metrics);
+                this.createStatusChart(data.detailed_data);
+                this.createTaskChart(data.detailed_data);
+            }
+
+            createActivityChart(metrics) {
+                const ctx = document.getElementById('activityChart');
+                if (!ctx) return;
+
+                if (this.charts.activity) {
+                    this.charts.activity.destroy();
+                }
+
+                const activeHours = metrics.total_active_hours || 0;
+                const expectedHours = metrics.expected_working_hours || 15;
+                const remainingHours = Math.max(0, expectedHours - activeHours);
+
+                this.charts.activity = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active Hours', 'Remaining Expected'],
+                        datasets: [{
+                            data: [activeHours, remainingHours],
+                            backgroundColor: ['#10b981', '#6b7280'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#cbd5e1' }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+
+            createStatusChart(detailedData) {
+                const ctx = document.getElementById('statusChart');
+                if (!ctx) return;
+
+                if (this.charts.status) {
+                    this.charts.status.destroy();
+                }
+
+                const members = Object.keys(detailedData || {});
+                let activeCount = 0, inactiveCount = 0;
+
+                members.forEach(member => {
+                    const data = detailedData[member];
+                    if (data.active_tasks > 0) {
+                        activeCount++;
+                    } else {
+                        inactiveCount++;
+                    }
+                });
+
+                this.charts.status = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Active Members', 'Inactive Members'],
+                        datasets: [{
+                            data: [activeCount, inactiveCount],
+                            backgroundColor: ['#10b981', '#ef4444'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#cbd5e1' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            createTaskChart(detailedData) {
+                const ctx = document.getElementById('taskChart');
+                if (!ctx) return;
+
+                if (this.charts.task) {
+                    this.charts.task.destroy();
+                }
+
+                const members = Object.entries(detailedData).map(([name, data]) => ({
+                    name,
+                    active: data.active_tasks || 0,
+                    total: data.total_tasks || 0
+                }));
+
+                this.charts.task = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: members.map(m => m.name),
+                        datasets: [
+                            {
+                                label: 'Active Tasks',
+                                data: members.map(m => m.active),
+                                backgroundColor: '#3b82f6'
+                            },
+                            {
+                                label: 'Total Tasks', 
+                                data: members.map(m => m.total),
+                                backgroundColor: '#6b7280'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#cbd5e1' }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#cbd5e1' } },
+                            y: { 
+                                ticks: { color: '#cbd5e1' },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateMemberGrid(detailedData) {
+                const grid = document.getElementById('memberGrid');
+                if (!grid) return;
+
+                grid.innerHTML = '';
+
+                Object.entries(detailedData).forEach(([member, data]) => {
+                    const card = this.createMemberCard(member, data);
+                    grid.appendChild(card);
+                });
+            }
+
+            createMemberCard(name, data) {
+                const card = document.createElement('div');
+                card.className = 'member-card';
+
+                const status = this.getMemberStatus(data);
+                
+                card.innerHTML = `
+                    <div class="member-card-header">
+                        <div class="member-card-name">${name}</div>
+                        <div class="member-status ${status.class}">${status.text}</div>
+                    </div>
+                    <div class="member-card-stats">
+                        <div class="member-stat">
+                            <span class="member-stat-label">Active</span>
+                            <span class="member-stat-value">${(data.total_active_hours || 0).toFixed(1)}h</span>
+                        </div>
+                        <div class="member-stat">
+                            <span class="member-stat-label">Tasks</span>
+                            <span class="member-stat-value">${data.active_tasks || 0}</span>
+                        </div>
+                        <div class="member-stat">
+                            <span class="member-stat-label">Projects</span>
+                            <span class="member-stat-value">${this.getUniqueProjects(data)}</span>
+                        </div>
+                    </div>
+                `;
+
+                return card;
+            }
+
+            getMemberStatus(data) {
+                const activeHours = data.total_active_hours || 0;
+                const activeTasks = data.active_tasks || 0;
+
+                if (activeTasks === 0) {
+                    return { text: 'Inactive', class: 'status-danger' };
+                } else if (activeHours >= 6) {
+                    return { text: 'Highly Active', class: 'status-active' };
+                } else if (activeHours >= 3) {
+                    return { text: 'Active', class: 'status-active' };
+                } else {
+                    return { text: 'Limited Activity', class: 'status-warning' };
+                }
+            }
+
+            getUniqueProjects(data) {
+                if (!data.task_details) return 0;
+                const projects = new Set(data.task_details.map(task => task.project_name));
+                return projects.size;
+            }
+
+            updateQuickButtons(selectedDate = null) {
+                const today = new Date().toISOString().split('T')[0];
+                const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                const current = selectedDate || this.datePicker.selectedDates[0]?.toISOString().split('T')[0];
+
+                document.querySelectorAll('.quick-date-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    const days = parseInt(btn.getAttribute('data-days'));
+                    
+                    if (days === 0 && current === today) {
+                        btn.classList.add('active');
+                    } else if (days === -1 && current === yesterday) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+
+            updateTimelineDate() {
+                const element = document.getElementById('timelineDate');
+                if (element) {
+                    const date = this.datePicker.selectedDates[0] || new Date();
+                    element.textContent = date.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                }
+            }
+
+            updateLastUpdated() {
+                const element = document.getElementById('lastUpdated');
+                if (element) {
+                    const now = new Date();
+                    element.textContent = `Last updated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`;
+                }
+            }
+
+            switchTab(tabElement) {
+                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+                tabElement.classList.add('active');
+                const tabId = tabElement.getAttribute('data-tab') + 'Tab';
+                const tabContent = document.getElementById(tabId);
+                if (tabContent) {
+                    tabContent.classList.add('active');
+                }
+            }
+
+            showLoading(show) {
+                const loading = document.getElementById('loadingScreen');
+                if (loading) {
+                    loading.style.display = show ? 'flex' : 'none';
+                }
+            }
+
+            showError(message) {
+                const errorElement = document.getElementById('errorText');
+                const errorContainer = document.getElementById('errorMessage');
+
+                if (errorElement && errorContainer) {
+                    errorElement.textContent = message;
+                    errorContainer.style.display = 'block';
+
+                    setTimeout(() => {
+                        errorContainer.style.display = 'none';
+                    }, 5000);
+                }
+            }
+
+            startAutoRefresh() {
+                // Refresh every 5 minutes
+                setInterval(() => {
+                    this.loadData();
+                }, 5 * 60 * 1000);
+            }
+        }
+
+        // Global functions for buttons
+        function refreshData() {
+            if (window.dashboard) {
+                window.dashboard.loadData();
+            }
+        }
+
+        function exportData() {
+            // Export functionality
+            console.log('Export data feature');
+        }
+
+        function zoomTimeline(range) {
+            // Timeline zoom functionality
+            console.log('Zoom timeline:', range);
+            
+            // Update button states
+            document.querySelectorAll('.timeline-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Initialize dashboard when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new EnhancedDashboard();
+        });
+    </script>
 </body>
 </html>
