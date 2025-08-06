@@ -27,6 +27,20 @@ your_project/
 
 api call clickup, sample with date
 
+structure 
+your_project/
+├── template_v1/
+│   ├── components/
+│   │   ├── charts.html          
+│   │   ├── kpi-cards.html
+│   │   ├── alerts.html
+│   │   └── member-grid.html
+│   ├── dashboard.html
+│   └── index.html
+├── static_v1/
+├── services/
+└── clickup_dashboard_v1.py
+
 curl -X GET \
   'https://api.clickup.com/api/v2/team/9013605091/task?assignees[]=126127973&include_closed=false&due_date=1753891200000' \
   -H 'Authorization: pk_126127973_ULPZ9TEC7TGPGAP3WVCA2KWOQQGV3Y4K'
