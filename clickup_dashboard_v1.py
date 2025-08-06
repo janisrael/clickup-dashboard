@@ -9,8 +9,8 @@ import time
 import threading
 
 app = Flask(__name__)
-app.template_folder = 'template'
-app.static_folder = 'static'
+app.template_folder = 'template_v1'
+app.static_folder = 'static_v1'
 
 # Configuration
 CLICKUP_API_KEY = os.getenv('CLICKUP_API_KEY', 'pk_126127973_ULPZ9TEC7TGPGAP3WVCA2KWOQQGV3Y4K')
@@ -389,4 +389,4 @@ if __name__ == '__main__':
     refresh_thread.start()
     
     # Run Flask app
-    app.run(debug=True, port=5012)
+    app.run(debug=True, port=5013)
