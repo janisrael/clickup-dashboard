@@ -146,7 +146,8 @@ def background_cache_updater():
             logger.error(f"Background cache update failed: {e}")
         
         # Wait 10 minutes before next update
-        time.sleep(600)
+        logger.info(f"Waiting {3600/60} minutes before next update...")
+        time.sleep(3600)
 
 def start_background_tasks():
     """Start background tasks"""

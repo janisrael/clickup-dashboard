@@ -240,50 +240,44 @@ window.charts = {
   // },
 
   calculateTimelinePositionForZoom(startTime, endTime, zoomRange) {
-    let rangeStart, rangeEnd;
-    const breakStart = 12;
-    const breakEnd = 12.5;
+    let rangeStart,
+      rangeEnd,
+      breakStart = 12,
+      breakEnd = 12.5;
 
-    // Define time blocks in decimal hours
     switch (zoomRange) {
       case "morning":
-        rangeStart = 9.5; // 9:30 AM
-        rangeEnd = 12; // 12:00 PM
+        rangeStart = 9.5;
+        rangeEnd = 12;
         break;
       case "afternoon":
-        rangeStart = 12.5; // 12:30 PM
-        rangeEnd = 17; // 5:00 PM
+        rangeStart = 12.5;
+        rangeEnd = 17;
         break;
       default: // full day
-        rangeStart = 9.5; // 9:30 AM
-        rangeEnd = 17; // 5:00 PM
+        rangeStart = 9.5;
+        rangeEnd = 17;
     }
 
-    const rangeDuration = (() => {
-      if (zoomRange === "day") return breakStart - rangeStart + (rangeEnd - breakEnd); // 7 hrs
-      return rangeEnd - rangeStart;
-    })();
+    let startHour = startTime.getHours() + startTime.getMinutes() / 60;
+    let endHour = endTime.getHours() + endTime.getMinutes() / 60;
 
-    const toDecimal = (date) => date.getHours() + date.getMinutes() / 60;
-
-    let startHour = toDecimal(startTime);
-    let endHour = toDecimal(endTime);
-
-    // Clamp times
+    // Clamp start and end to workday range
     const clampedStart = Math.max(rangeStart, Math.min(rangeEnd, startHour));
     const clampedEnd = Math.max(rangeStart, Math.min(rangeEnd, endHour));
 
-    // Adjust for lunch break in full-day view
-    const adjustForBreaks = (hour) => {
+    // Adjust effective hours to skip lunch (only for full day view)
+    const calculateEffective = (hour) => {
       if (zoomRange !== "day") return hour;
       if (hour <= breakStart) return hour;
       if (hour >= breakEnd) return hour - 0.5;
-      return breakStart; // if inside the break
+      return breakStart;
     };
 
-    const effectiveStart = adjustForBreaks(clampedStart);
-    const effectiveEnd = adjustForBreaks(clampedEnd);
+    const effectiveStart = calculateEffective(clampedStart);
+    const effectiveEnd = calculateEffective(clampedEnd);
 
+    const rangeDuration = zoomRange === "day" ? 7 : rangeEnd - rangeStart;
     const leftPercent = ((effectiveStart - rangeStart) / rangeDuration) * 100;
     const widthPercent = Math.max(8, ((effectiveEnd - effectiveStart) / rangeDuration) * 100);
 
@@ -465,10 +459,10 @@ window.charts = {
   //     widthPercent: Math.max(8, widthPercent), // Minimum width for zoom
   //   };
   // },
+
   zoomTimeline(range) {
     this.currentZoom = range;
 
-    // Update timeline display based on zoom level
     const timeRulers = document.querySelectorAll(".time-ruler");
 
     timeRulers.forEach((ruler) => {
@@ -499,10 +493,8 @@ window.charts = {
       }
     });
 
-    // Recalculate all timeline blocks based on selected zoom
     this.recalculateTimelinePositions(range);
 
-    // Update active state of zoom buttons
     document.querySelectorAll(".timeline-btn").forEach((btn) => {
       btn.classList.remove("active");
     });
@@ -512,6 +504,7 @@ window.charts = {
       activeBtn.classList.add("active");
     }
   },
+
   recalculateTimelinePositions(range) {
     const timeBlocks = document.querySelectorAll(".time-block");
 

@@ -13,12 +13,13 @@ BASE_URL = Config.BASE_URL
 TIMEZONE = Config.TIMEZONE
 TARGET_MEMBERS = Config.TARGET_MEMBERS
 
+
 # Working hours configuration
 WORKDAY_START_HOUR = 9
-WORKDAY_END_HOUR = 18
-LUNCH_BREAK_START = 13
-LUNCH_BREAK_END = 14
-WORKING_HOURS_PER_DAY = 8
+WORKDAY_END_HOUR = 17
+LUNCH_BREAK_START = 12
+LUNCH_BREAK_END = 12.5
+WORKING_HOURS_PER_DAY = 7.5
 
 def rate_limit(max_calls_per_minute=20):
     """Rate limiting decorator"""
@@ -531,3 +532,227 @@ def next_working_day(date_str):
         date += timedelta(days=1)
         if date.weekday() < 5:  # 0-4 = Monday-Friday
             return date.strftime("%Y-%m-%d")
+
+# Enhanced backend processing for task-level data
+# Add these functions to your services/dashboard_logic.py
+
+def enhance_member_data_with_task_details(member_analysis, tasks):
+    """Enhanced function to separate tasks properly with project/list information"""
+    
+    # Process each in-progress task separately  
+    enhanced_periods = []
+    
+    for task in tasks:
+        if is_task_in_progress(task):
+            # Get task metadata
+            task_name = task.get('name', 'Unknown Task')
+            task_id = task.get('id')
+            status = task.get('status', {}).get('status', 'in progress')
+            
+            # Extract project/list information from task hierarchy
+            project_info = extract_project_info(task)
+            
+            # Create individual task period
+            task_period = {
+                'start': datetime.now(tz=TIMEZONE).replace(hour=9, minute=0).isoformat(),
+                'end': datetime.now(tz=TIMEZONE).isoformat(),
+                'task_name': task_name,
+                'task_id': task_id,
+                'duration_hours': 2.5,  # Estimated per task
+                'status': status,
+                'project_name': project_info.get('project_name', 'Unknown Project'),
+                'list_name': project_info.get('list_name', 'Unknown List'),
+                'space_name': project_info.get('space_name', 'Unknown Space')
+            }
+            
+            enhanced_periods.append(task_period)
+    
+    # Update the member analysis with enhanced periods
+    member_analysis['in_progress_periods'] = enhanced_periods
+    member_analysis['total_active_hours'] = len(enhanced_periods) * 2.5  # 2.5h per task
+    
+    return member_analysis
+
+def extract_project_info(task):
+    """Extract project/list/space information from task"""
+    project_info = {
+        'project_name': 'Unknown Project',
+        'list_name': 'Unknown List', 
+        'space_name': 'Unknown Space'
+    }
+    
+    # Try to get list information
+    task_list = task.get('list')
+    if task_list:
+        project_info['list_name'] = task_list.get('name', 'Unknown List')
+        
+        # Try to get folder/project information
+        folder = task_list.get('folder')
+        if folder:
+            project_info['project_name'] = folder.get('name', 'Unknown Project')
+            
+            # Try to get space information
+            space = folder.get('space')
+            if space:
+                project_info['space_name'] = space.get('name', 'Unknown Space')
+        else:
+            # List might be directly in space
+            space = task_list.get('space')
+            if space:
+                project_info['space_name'] = space.get('name', 'Unknown Space')
+                project_info['project_name'] = space.get('name', 'Unknown Project')
+    
+    return project_info
+
+def calculate_realistic_task_durations(tasks):
+    """Calculate more realistic task durations based on 7.5h workday"""
+    
+    total_tasks = len(tasks)
+    if total_tasks == 0:
+        return []
+    
+    # Target 7.5 hours per member per day
+    target_hours = 7.5
+    
+    # Distribute hours among tasks (minimum 30 minutes, maximum 3 hours per task)
+    if total_tasks == 1:
+        hours_per_task = target_hours
+    elif total_tasks <= 3:
+        hours_per_task = target_hours / total_tasks
+    else:
+        # For more than 3 tasks, some get more time than others
+        primary_tasks = min(3, total_tasks)
+        hours_per_task = target_hours / primary_tasks
+    
+    # Create time slots throughout the day
+    work_start = 9  # 9 AM
+    lunch_break = 12.5  # 12:30 PM
+    lunch_end = 13.5   # 1:30 PM
+    work_end = 17.5    # 5:30 PM
+    
+    morning_hours = lunch_break - work_start  # 3.5 hours
+    afternoon_hours = work_end - lunch_end    # 4 hours
+    
+    task_periods = []
+    current_time = work_start
+    
+    for i, task in enumerate(tasks[:4]):  # Limit to 4 tasks for realism
+        # Calculate duration for this task
+        if i < 2:  # First two tasks get more time
+            duration = min(3.0, max(0.5, hours_per_task))
+        else:  # Remaining tasks get remaining time
+            remaining_time = target_hours - sum(p['duration_hours'] for p in task_periods)
+            remaining_tasks = len(tasks) - i
+            duration = min(2.0, max(0.5, remaining_time / remaining_tasks))
+        
+        # Handle lunch break
+        if current_time >= lunch_break and current_time < lunch_end:
+            current_time = lunch_end
+        
+        # Don't go past work end
+        if current_time + duration > work_end:
+            duration = work_end - current_time
+            if duration < 0.5:
+                break
+        
+        start_time = current_time
+        end_time = current_time + duration
+        
+        task_periods.append({
+            'start_hour': start_time,
+            'end_hour': end_time,
+            'duration_hours': duration,
+            'task': task
+        })
+        
+        current_time = end_time + 0.25  # 15 minute break between tasks
+    
+    return task_periods
+
+# Update the analyze_member_activity function
+def analyze_member_activity_enhanced(member, team_id, current_time):
+    """Enhanced member activity analysis with proper task separation"""
+    user = member.get('user', {})
+    user_id = user.get('id')
+    username = user.get('username', 'Unknown')
+    
+    logger.info(f"Analyzing {username} with enhanced task separation...")
+    
+    # Get all tasks for this member
+    tasks = get_member_tasks_comprehensive(team_id, user_id, username)
+    
+    # Filter for in-progress tasks
+    in_progress_tasks = [task for task in tasks if is_task_in_progress(task)]
+    
+    logger.info(f"  {username}: {len(tasks)} total tasks, {len(in_progress_tasks)} in progress")
+    
+    # Calculate realistic task periods
+    task_periods = calculate_realistic_task_durations(in_progress_tasks)
+    
+    # Create individual task periods with proper metadata
+    in_progress_periods = []
+    total_active_hours = 0
+    
+    for period_data in task_periods:
+        task = period_data['task']
+        project_info = extract_project_info(task)
+        
+        # Create datetime objects
+        today = current_time.date()
+        start_datetime = datetime.combine(today, datetime.min.time()) + timedelta(hours=period_data['start_hour'])
+        end_datetime = datetime.combine(today, datetime.min.time()) + timedelta(hours=period_data['end_hour'])
+        
+        period = {
+            'start': start_datetime.isoformat(),
+            'end': end_datetime.isoformat(),
+            'task_name': task.get('name', 'Unknown Task'),
+            'task_id': task.get('id'),
+            'duration_hours': period_data['duration_hours'],
+            'status': task.get('status', {}).get('status', 'in progress'),
+            'project_name': project_info['project_name'],
+            'list_name': project_info['list_name'],
+            'space_name': project_info['space_name']
+        }
+        
+        in_progress_periods.append(period)
+        total_active_hours += period_data['duration_hours']
+    
+    # Enhanced task details
+    task_details = []
+    for task in tasks:
+        project_info = extract_project_info(task)
+        task_details.append({
+            'id': task.get('id'),
+            'name': task.get('name', 'Unknown Task'),
+            'status': task.get('status', {}).get('status', 'unknown'),
+            'project_name': project_info['project_name'],
+            'list_name': project_info['list_name'],
+            'space_name': project_info['space_name'],
+            'url': task.get('url', ''),
+            'priority': task.get('priority'),
+            'is_in_progress': is_task_in_progress(task)
+        })
+    
+    # Calculate downtime (minimal if tasks are distributed well)
+    downtime_periods = []
+    if total_active_hours < 6:  # If less than 6 hours active
+        gap_hours = 7.5 - total_active_hours
+        if gap_hours > 1:
+            downtime_periods.append({
+                'start': current_time.replace(hour=17, minute=30).isoformat(),
+                'end': current_time.replace(hour=18, minute=0).isoformat(),
+                'duration_hours': gap_hours,
+                'type': 'end_of_day_gap'
+            })
+    
+    return {
+        'username': username,
+        'user_id': user_id,
+        'total_tasks': len(tasks),
+        'active_tasks': len(in_progress_tasks),
+        'total_active_hours': round(total_active_hours, 1),
+        'total_downtime_hours': sum(p['duration_hours'] for p in downtime_periods),
+        'in_progress_periods': in_progress_periods,
+        'downtime_periods': downtime_periods,
+        'task_details': task_details
+    }

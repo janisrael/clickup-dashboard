@@ -1,61 +1,65 @@
-// Main dashboard controller
+// Enhanced Main dashboard controller - static_v1/js/dashboard/main.js
 window.dashboard = {
   currentData: null,
   refreshInterval: null,
 
   init() {
-    console.log("Dashboard init started...");
-    console.log("Available modules:", {
-      theme: !!window.theme,
-      datePicker: !!window.datePicker,
-      charts: !!window.charts,
-      utils: !!window.utils,
-      api: !!window.api,
-    });
+    console.log("Enhanced Dashboard init started...");
 
-    // Initialize modules if available
-    if (window.theme && typeof window.theme.init === "function") {
-      theme.init();
-    } else {
-      console.warn("Theme module not available, using default theme");
-      // Set a default theme
-      document.documentElement.setAttribute("data-theme", "dark");
-    }
+    // Initialize modules
+    this.initializeModules();
 
-    if (window.datePicker && typeof window.datePicker.init === "function") {
-      datePicker.init();
-    } else {
-      console.warn("DatePicker module not available");
-    }
+    // Setup event listeners
+    this.setupEventListeners();
 
+    // Load initial data
+    // this.loadData();
+
+    // Setup auto-refresh
+    // this.startAutoRefresh();
+
+    // Setup resize handler
+    this.setupResizeHandler();
+
+    console.log("Enhanced Dashboard initialized successfully");
+  },
+
+  initializeModules() {
+    // Initialize charts module
     if (window.charts && typeof window.charts.init === "function") {
       charts.init();
     } else {
       console.warn("Charts module not available");
     }
 
-    // Setup event listeners
-    this.setupEventListeners();
+    // Initialize date picker
+    if (window.datePicker && typeof window.datePicker.init === "function") {
+      datePicker.init();
+    } else {
+      this.setupFallbackDatePicker();
+    }
 
-    // Load initial data
-    const selectedDate = window.datePicker
-      ? datePicker.getSelectedDate()
-      : new Date().toISOString().split("T")[0];
-    this.loadData(selectedDate);
+    // Initialize theme (if available)
+    if (window.theme && typeof window.theme.init === "function") {
+      theme.init();
+    } else {
+      // Set default dark theme
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  },
 
-    // Setup auto-refresh
-    this.startAutoRefresh();
+  setupFallbackDatePicker() {
+    // Fallback date picker setup if flatpickr is not available
+    const dateInput = document.getElementById("datePicker");
+    if (dateInput) {
+      dateInput.type = "date";
+      dateInput.value = new Date().toISOString().split("T")[0];
+      dateInput.max = new Date().toISOString().split("T")[0];
 
-    // Setup resize handler
-    if (window.utils && window.utils.debounce) {
-      window.addEventListener(
-        "resize",
-        utils.debounce(() => {
-          if (window.charts && window.charts.resize) {
-            charts.resize();
-          }
-        }, 250)
-      );
+      dateInput.addEventListener("change", (e) => {
+        this.loadData(e.target.value);
+        this.updateQuickButtons(e.target.value);
+      });
     }
   },
 
@@ -65,219 +69,319 @@ window.dashboard = {
       tab.addEventListener("click", (e) => this.switchTab(e.target));
     });
 
-    // View toggle for member grid
-    document.querySelectorAll(".view-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => this.toggleView(e.target));
+    // Quick date buttons
+    document.querySelectorAll(".quick-date-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const days = parseInt(e.target.getAttribute("data-days"));
+        this.setDateByDays(days);
+      });
     });
+
+    // Timeline zoom buttons
+    document.querySelectorAll(".timeline-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const range = this.extractZoomRange(e.target);
+        if (range && window.charts && window.charts.zoomTimeline) {
+          charts.zoomTimeline(range);
+        }
+      });
+    });
+
+    // Search functionality (if search input exists)
+    const searchInput = document.getElementById("taskSearch");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        if (window.charts && window.charts.searchTasks) {
+          charts.searchTasks(e.target.value);
+        }
+      });
+    }
   },
 
-  async loadData(date) {
+  setupResizeHandler() {
+    if (window.utils && window.utils.debounce) {
+      window.addEventListener(
+        "resize",
+        utils.debounce(() => {
+          if (window.charts && window.charts.resize) {
+            charts.resize();
+          }
+        }, 250)
+      );
+    } else {
+      // Fallback without debounce
+      window.addEventListener("resize", () => {
+        setTimeout(() => {
+          if (window.charts && window.charts.resize) {
+            charts.resize();
+          }
+        }, 250);
+      });
+    }
+  },
+
+  async loadData(date = null) {
     this.showLoading(true);
 
     try {
-      // Fetch dashboard data
-      const data = await api.getDashboardData(date);
+      const selectedDate = date || this.getCurrentDate();
+      console.log(`Loading data for date: ${selectedDate}`);
+
+      // Try to fetch from API first
+      const data = await this.fetchDashboardData(selectedDate);
+
       this.currentData = data;
-
-      if (data.is_weekend) {
-        this.showWeekendMessage();
-      } else {
-        this.updateDashboard(data);
-        this.loadAlerts(date);
-      }
-
-      // Update last updated time
+      this.updateDashboard(data);
       this.updateLastUpdated();
     } catch (error) {
-      this.showError("Failed to load dashboard data");
       console.error("Load data error:", error);
+      this.showError("Failed to load dashboard data");
+
+      // Fallback to sample data for demo
+      this.loadSampleData();
     } finally {
       this.showLoading(false);
     }
   },
 
+  async fetchDashboardData(date) {
+    try {
+      const response = await fetch(`/api/dashboard-data?date=${date}`);
+
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.warn("API fetch failed, using sample data:", error);
+      throw error;
+    }
+  },
+
+  loadSampleData() {
+    console.log("Loading sample data for demo...");
+
+    // Enhanced sample data with proper task-level breakdown
+    const sampleData = {
+      timestamp: new Date().toISOString(),
+      date: new Date().toISOString().split("T")[0],
+      members_analyzed: 2,
+      team_metrics: {
+        total_active_hours: 15.0,
+        total_downtime_hours: 0.0,
+        expected_working_hours: 15.0,
+        team_efficiency: 100.0,
+        currently_inactive: [],
+        total_tasks: 8,
+        total_active_tasks: 8,
+      },
+      detailed_data: {
+        Arif: {
+          username: "Arif",
+          total_tasks: 4,
+          active_tasks: 4,
+          total_active_hours: 7.5,
+          total_downtime_hours: 0.0,
+          in_progress_periods: [
+            {
+              start: this.getTodayDateTime("09:00"),
+              end: this.getTodayDateTime("11:30"),
+              task_name: "create responsive content sizes",
+              task_id: "task_001",
+              duration_hours: 2.5,
+              status: "in progress",
+              project_name: "Web Development",
+              list_name: "Frontend Tasks",
+            },
+            {
+              start: this.getTodayDateTime("13:30"),
+              end: this.getTodayDateTime("16:00"),
+              task_name: "Design And Implementation",
+              task_id: "task_002",
+              duration_hours: 2.5,
+              status: "in progress",
+              project_name: "UI/UX Design",
+              list_name: "Development",
+            },
+            {
+              start: this.getTodayDateTime("16:30"),
+              end: this.getTodayDateTime("18:00"),
+              task_name: "Content Integration",
+              task_id: "task_003",
+              duration_hours: 1.5,
+              status: "in progress",
+              project_name: "CMS Setup",
+              list_name: "Backend Tasks",
+            },
+            {
+              start: this.getTodayDateTime("11:45"),
+              end: this.getTodayDateTime("13:00"),
+              task_name: "create __pre variables and values",
+              task_id: "task_004",
+              duration_hours: 1.25,
+              status: "staging",
+              project_name: "Frontend Framework",
+              list_name: "Testing",
+            },
+          ],
+          downtime_periods: [],
+          task_details: [
+            {
+              id: "task_001",
+              name: "create responsive content sizes",
+              status: "in progress",
+              project_name: "Web Development",
+              list_name: "Frontend Tasks",
+            },
+            {
+              id: "task_002",
+              name: "Design And Implementation",
+              status: "in progress",
+              project_name: "UI/UX Design",
+              list_name: "Development",
+            },
+            {
+              id: "task_003",
+              name: "Content Integration",
+              status: "in progress",
+              project_name: "CMS Setup",
+              list_name: "Backend Tasks",
+            },
+            {
+              id: "task_004",
+              name: "create __pre variables and values",
+              status: "staging",
+              project_name: "Frontend Framework",
+              list_name: "Testing",
+            },
+          ],
+        },
+        Jan: {
+          username: "Jan",
+          total_tasks: 4,
+          active_tasks: 4,
+          total_active_hours: 7.5,
+          total_downtime_hours: 0.0,
+          in_progress_periods: [
+            {
+              start: this.getTodayDateTime("09:00"),
+              end: this.getTodayDateTime("11:00"),
+              task_name: "Organization payment system",
+              task_id: "task_005",
+              duration_hours: 2.0,
+              status: "in progress",
+              project_name: "Payment Integration",
+              list_name: "Backend Features",
+            },
+            {
+              start: this.getTodayDateTime("11:30"),
+              end: this.getTodayDateTime("14:00"),
+              task_name: "MileStone(Organizer side)",
+              task_id: "task_006",
+              duration_hours: 2.5,
+              status: "in progress",
+              project_name: "Event Management",
+              list_name: "Core Features",
+            },
+            {
+              start: this.getTodayDateTime("14:30"),
+              end: this.getTodayDateTime("16:30"),
+              task_name: "Add Delete ticket capability",
+              task_id: "task_007",
+              duration_hours: 2.0,
+              status: "in progress",
+              project_name: "Ticketing System",
+              list_name: "User Management",
+            },
+            {
+              start: this.getTodayDateTime("16:45"),
+              end: this.getTodayDateTime("17:45"),
+              task_name: "MileStone(P1 MVP)",
+              task_id: "task_008",
+              duration_hours: 1.0,
+              status: "in progress",
+              project_name: "MVP Development",
+              list_name: "Milestones",
+            },
+          ],
+          downtime_periods: [],
+          task_details: [
+            {
+              id: "task_005",
+              name: "Organization payment system",
+              status: "in progress",
+              project_name: "Payment Integration",
+              list_name: "Backend Features",
+            },
+            {
+              id: "task_006",
+              name: "MileStone(Organizer side)",
+              status: "in progress",
+              project_name: "Event Management",
+              list_name: "Core Features",
+            },
+            {
+              id: "task_007",
+              name: "Add Delete ticket capability",
+              status: "in progress",
+              project_name: "Ticketing System",
+              list_name: "User Management",
+            },
+            {
+              id: "task_008",
+              name: "MileStone(P1 MVP)",
+              status: "in progress",
+              project_name: "MVP Development",
+              list_name: "Milestones",
+            },
+          ],
+        },
+      },
+    };
+
+    this.currentData = sampleData;
+    this.updateDashboard(sampleData);
+  },
+
   updateDashboard(data) {
+    console.log("Updating dashboard with data:", data);
+
     // Update KPIs
     this.updateKPIs(data.team_metrics || {});
 
-    // Update charts
-    charts.updateAll(data);
+    // Update charts and timeline
+    if (window.charts && window.charts.updateAll) {
+      charts.updateAll(data);
+    } else {
+      console.warn("Charts module updateAll method not available");
+    }
 
     // Update member grid
     this.updateMemberGrid(data.detailed_data || {});
 
-    // Update detailed statistics
-    this.updateDetailedStats(data);
-
-    // Update timeline date
-    const timelineDate = document.getElementById("timelineDate");
-    if (timelineDate) {
-      timelineDate.textContent = utils.formatDate(datePicker.getSelectedDate());
-    }
-
     // Show main content
-    document.getElementById("clickupTab").style.display = "block";
+    const clickupTab = document.getElementById("clickupTab");
+    if (clickupTab) {
+      clickupTab.style.display = "block";
+    }
   },
 
   updateKPIs(metrics) {
-    // Update values
-    document.getElementById("membersAnalyzed").textContent = metrics.members_analyzed || 0;
-    document.getElementById("totalActiveHours").textContent = `${(
-      metrics.total_active_hours || 0
-    ).toFixed(1)}h`;
-    document.getElementById("totalDowntime").textContent = `${(
-      metrics.total_downtime_hours || 0
-    ).toFixed(1)}h`;
-    document.getElementById("teamEfficiency").textContent = `${(
-      metrics.team_efficiency || 0
-    ).toFixed(1)}%`;
-
-    // Update old tasks count
-    document.getElementById("oldTasks").textContent = metrics.old_tasks || 0;
-
-    // Update subtexts
-    const expectedHours = (metrics.members_analyzed || 0) * 8; // 8 hours per member
-    document.getElementById("activeHoursSubtext").textContent = `of ${expectedHours}h expected`;
-
-    const inactivePeriods = metrics.members_with_downtime || 0;
-    document.getElementById(
-      "downtimeSubtext"
-    ).textContent = `${inactivePeriods}+ hour inactive periods`;
-
-    document.getElementById("oldTasksSubtext").textContent = "Tasks older than 7 days";
-    document.getElementById("efficiencySubtext").textContent = "Active vs total working time";
-
-    // Update members subtext based on current status
-    const currentlyActive =
-      (metrics.members_analyzed || 0) -
-      (metrics.currently_inactive ? metrics.currently_inactive.length : 0);
-    document.getElementById("membersSubtext").textContent = `Currently being tracked`;
-  },
-
-  // updateDetailedStats(data) {
-  //   const metrics = data.team_metrics || {};
-  //   const detailedData = data.detailed_data || {};
-
-  //   // Update timing analysis
-  //   document.getElementById("currentTime").textContent = utils.formatTime(new Date());
-  //   document.getElementById("analysisDateDetail").textContent = utils.formatDate(data.date);
-  //   document.getElementById("totalActiveTime").textContent = utils.formatDuration(
-  //     metrics.total_active_hours || 0
-  //   );
-  //   document.getElementById("totalDowntimeDetail").textContent = utils.formatDuration(
-  //     metrics.total_downtime_hours || 0
-  //   );
-
-  //   // Calculate average downtime
-  //   const avgDowntime =
-  //     metrics.members_analyzed > 0 ? metrics.total_downtime_hours / metrics.members_analyzed : 0;
-  //   document.getElementById("avgDowntime").textContent = utils.formatDuration(avgDowntime);
-
-  //   // Update team statistics
-  //   document.getElementById("totalMembers").textContent = metrics.members_analyzed || 0;
-
-  //   // Count member statuses
-  //   let activeCount = 0;
-  //   let warningCount = 0;
-  //   let criticalCount = 0;
-
-  //   Object.values(detailedData).forEach((member) => {
-  //     if (member.total_downtime_hours >= 4) {
-  //       criticalCount++;
-  //     } else if (member.total_downtime_hours >= 2) {
-  //       warningCount++;
-  //     } else if (member.total_active_hours > 0) {
-  //       activeCount++;
-  //     }
-  //   });
-
-  //   document.getElementById("activeMembers").textContent = activeCount;
-  //   document.getElementById("warningMembers").textContent = warningCount;
-  //   document.getElementById("criticalMembers").textContent = criticalCount;
-  //   document.getElementById("inactiveCount").textContent = metrics.currently_inactive
-  //     ? metrics.currently_inactive.length
-  //     : 0;
-
-  //   // Update member status list
-  //   this.updateMemberStatusList(detailedData);
-  // },
-  updateDetailedStats(data) {
-    const metrics = data.team_metrics || {};
-    const detailedData = data.detailed_data || {};
-
-    // Helper function to safely set text content
-    const setText = (id, value) => {
-      const element = document.getElementById(id);
-      if (element) element.textContent = value;
+    const updates = {
+      membersAnalyzed: metrics.members_analyzed || 0,
+      totalActiveHours: `${(metrics.total_active_hours || 0).toFixed(1)}h`,
+      totalDowntime: `${(metrics.total_downtime_hours || 0).toFixed(1)}h`,
+      activeTasks: metrics.total_active_tasks || 0,
+      teamEfficiency: `${(metrics.team_efficiency || 0).toFixed(1)}%`,
     };
 
-    // Update timing analysis
-    setText("currentTime", utils.formatTime(new Date()));
-    setText("analysisDateDetail", utils.formatDate(data.date));
-    setText("totalActiveTime", utils.formatDuration(metrics.total_active_hours || 0));
-    setText("totalDowntimeDetail", utils.formatDuration(metrics.total_downtime_hours || 0));
-
-    // Calculate average downtime
-    const avgDowntime =
-      metrics.members_analyzed > 0 ? metrics.total_downtime_hours / metrics.members_analyzed : 0;
-    setText("avgDowntime", utils.formatDuration(avgDowntime));
-
-    // Update team statistics
-    setText("totalMembers", metrics.members_analyzed || 0);
-
-    // Count member statuses
-    let activeCount = 0;
-    let warningCount = 0;
-    let criticalCount = 0;
-
-    Object.values(detailedData).forEach((member) => {
-      if (member.total_downtime_hours >= 4) {
-        criticalCount++;
-      } else if (member.total_downtime_hours >= 2) {
-        warningCount++;
-      } else if (member.total_active_hours > 0) {
-        activeCount++;
+    Object.entries(updates).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
       }
     });
-
-    setText("activeMembers", activeCount);
-    setText("warningMembers", warningCount);
-    setText("criticalMembers", criticalCount);
-    setText("inactiveCount", metrics.currently_inactive ? metrics.currently_inactive.length : 0);
-
-    // Update member status list
-    this.updateMemberStatusList(detailedData);
-  },
-
-  updateMemberStatusList(detailedData) {
-    const statusList = document.getElementById("memberStatusList");
-    if (!statusList) return;
-
-    const members = Object.entries(detailedData).map(([name, data]) => ({
-      name,
-      downtime: data.total_downtime_hours || 0,
-      active: data.total_active_hours || 0,
-      status:
-        data.total_downtime_hours >= 4
-          ? "critical"
-          : data.total_downtime_hours >= 2
-          ? "warning"
-          : "good",
-    }));
-
-    // Sort by downtime (highest first)
-    members.sort((a, b) => b.downtime - a.downtime);
-
-    statusList.innerHTML = members
-      .map(
-        (member) => `
-          <div class="member-status-item ${member.status}">
-              <span class="member-name">${member.name}</span>
-              <span class="member-downtime">${utils.formatDuration(member.downtime)}</span>
-          </div>
-      `
-      )
-      .join("");
   },
 
   updateMemberGrid(detailedData) {
@@ -293,172 +397,57 @@ window.dashboard = {
   },
 
   createMemberCard(name, data) {
-    const status = this.getMemberStatus(data);
     const card = document.createElement("div");
     card.className = "member-card";
 
+    const status = this.getMemberStatus(data);
+    const uniqueProjects = this.getUniqueProjects(data);
+
     card.innerHTML = `
-          <div class="member-header">
-              <h3 class="member-name">${name}</h3>
-              <span class="member-status ${status.class}">${status.text}</span>
+          <div class="member-card-header">
+              <div class="member-card-name">${name}</div>
+              <div class="member-status ${status.class}">${status.text}</div>
           </div>
-          <div class="member-stats">
-              <div class="stat">
-                  <span class="stat-label">Active</span>
-                  <span class="stat-value">${utils.formatDuration(data.total_active_hours)}</span>
+          <div class="member-card-stats">
+              <div class="member-stat">
+                  <span class="member-stat-label">Active</span>
+                  <span class="member-stat-value">${(data.total_active_hours || 0).toFixed(
+                    1
+                  )}h</span>
               </div>
-              <div class="stat">
-                  <span class="stat-label">Downtime</span>
-                  <span class="stat-value">${utils.formatDuration(data.total_downtime_hours)}</span>
+              <div class="member-stat">
+                  <span class="member-stat-label">Tasks</span>
+                  <span class="member-stat-value">${data.active_tasks || 0}</span>
               </div>
-              <div class="stat">
-                  <span class="stat-label">Tasks</span>
-                  <span class="stat-value">${data.task_count || 0}</span>
+              <div class="member-stat">
+                  <span class="member-stat-label">Projects</span>
+                  <span class="member-stat-value">${uniqueProjects}</span>
               </div>
           </div>
-          ${this.createMemberDetails(data)}
       `;
 
     return card;
   },
 
   getMemberStatus(data) {
-    if (data.total_downtime_hours > 3) {
-      return { text: "High Downtime", class: "status-danger" };
-    } else if (data.total_downtime_hours > 2) {
-      return { text: "Warning", class: "status-warning" };
-    } else if (data.total_active_hours > 0) {
+    const activeHours = data.total_active_hours || 0;
+    const activeTasks = data.active_tasks || 0;
+
+    if (activeTasks === 0) {
+      return { text: "Inactive", class: "status-danger" };
+    } else if (activeHours >= 6) {
+      return { text: "Highly Active", class: "status-active" };
+    } else if (activeHours >= 3) {
       return { text: "Active", class: "status-active" };
     } else {
-      return { text: "Inactive", class: "status-inactive" };
+      return { text: "Limited Activity", class: "status-warning" };
     }
   },
 
-  createMemberDetails(data) {
-    if (!data.downtime_periods || data.downtime_periods.length === 0) {
-      return "";
-    }
-
-    const periods = data.downtime_periods.slice(0, 3);
-    const details = periods
-      .map((period) => {
-        const start = utils.formatTime(period.start);
-        const end = utils.formatTime(period.end);
-        return `<div class="downtime-period">${start} - ${end} (${utils.formatDuration(
-          period.duration_hours
-        )})</div>`;
-      })
-      .join("");
-
-    return `
-          <div class="member-details">
-              <div class="details-title">Recent Downtime:</div>
-              ${details}
-              ${
-                data.downtime_periods.length > 3
-                  ? `<div class="more-periods">+${data.downtime_periods.length - 3} more</div>`
-                  : ""
-              }
-          </div>
-      `;
-  },
-
-  async loadAlerts(date) {
-    try {
-      const response = await api.getAlerts(date);
-      this.updateAlerts(response.alerts || []);
-    } catch (error) {
-      console.error("Failed to load alerts:", error);
-    }
-  },
-
-  updateAlerts(alerts) {
-    // Update priority alerts
-    const criticalMembers = [];
-    const downtimeInfo = [];
-
-    if (this.currentData && this.currentData.detailed_data) {
-      Object.entries(this.currentData.detailed_data).forEach(([member, data]) => {
-        if (data.total_downtime_hours >= 4) {
-          criticalMembers.push(member);
-        }
-        if (data.downtime_periods && data.downtime_periods.length > 0) {
-          const totalDowntime = data.total_downtime_hours;
-          downtimeInfo.push({
-            member: member,
-            hours: totalDowntime,
-            periods: data.downtime_periods.length,
-          });
-        }
-      });
-    }
-
-    // Update critical alert
-    const criticalDetails = document.getElementById("criticalAlertDetails");
-    if (criticalDetails) {
-      if (criticalMembers.length > 0) {
-        criticalDetails.innerHTML = `${
-          criticalMembers.length
-        } member(s) with 4+ hours downtime: <strong>${criticalMembers.join(", ")}</strong>`;
-      } else {
-        criticalDetails.innerHTML = "No critical downtime detected";
-      }
-    }
-
-    // Update productivity alert
-    const productivityDetails = document.getElementById("productivityAlertDetails");
-    if (productivityDetails) {
-      if (downtimeInfo.length > 0) {
-        const avgDowntime =
-          downtimeInfo.reduce((sum, info) => sum + info.hours, 0) / downtimeInfo.length;
-        productivityDetails.innerHTML = `Team average downtime is ${avgDowntime.toFixed(1)} hours`;
-      } else {
-        productivityDetails.innerHTML = "Team productivity is optimal";
-      }
-    }
-
-    // Update individual alerts list
-    const alertsList = document.getElementById("alertsList");
-    if (alertsList && alerts.length > 0) {
-      alertsList.innerHTML = `
-              <div class="alerts-subsection">
-                  <h4>[ALERT] ALERTS</h4>
-                  ${alerts
-                    .map(
-                      (alert) => `
-                      <div class="alert-item ${alert.type}">
-                          <span class="alert-time">[${utils.formatTime(alert.timestamp)}]</span>
-                          <span class="alert-text">${alert.message}</span>
-                      </div>
-                  `
-                    )
-                    .join("")}
-              </div>
-          `;
-    }
-  },
-
-  getAlertIcon(type) {
-    const icons = {
-      danger: "exclamation-circle",
-      warning: "exclamation-triangle",
-      info: "info-circle",
-      success: "check-circle",
-    };
-    return icons[type] || "bell";
-  },
-
-  dismissAlert(button) {
-    const alert = button.closest(".alert");
-    alert.style.opacity = "0";
-    setTimeout(() => alert.remove(), 300);
-  },
-
-  clearAlerts() {
-    const container = document.getElementById("alertsContainer");
-    if (container) {
-      container.innerHTML = '<div class="no-alerts">No active alerts</div>';
-    }
+  getUniqueProjects(data) {
+    if (!data.task_details) return 0;
+    const projects = new Set(data.task_details.map((task) => task.project_name || "Unknown"));
+    return projects.size;
   },
 
   switchTab(tabElement) {
@@ -470,7 +459,10 @@ window.dashboard = {
 
     tabElement.classList.add("active");
     const tabId = tabElement.getAttribute("data-tab") + "Tab";
-    document.getElementById(tabId).classList.add("active");
+    const tabContent = document.getElementById(tabId);
+    if (tabContent) {
+      tabContent.classList.add("active");
+    }
 
     // Load tab-specific data if needed
     const tabName = tabElement.getAttribute("data-tab");
@@ -478,6 +470,8 @@ window.dashboard = {
   },
 
   async loadTabData(tabName) {
+    console.log(`Loading data for tab: ${tabName}`);
+
     switch (tabName) {
       case "projects":
         // Load projects data
@@ -491,34 +485,72 @@ window.dashboard = {
     }
   },
 
-  toggleView(button) {
-    const view = button.getAttribute("data-view");
-    const grid = document.getElementById("memberGrid");
+  setDateByDays(days) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    const dateString = date.toISOString().split("T")[0];
 
-    // Update button states
-    document.querySelectorAll(".view-btn").forEach((btn) => btn.classList.remove("active"));
-    button.classList.add("active");
-
-    // Update grid class
-    if (view === "list") {
-      grid.classList.add("list-view");
-    } else {
-      grid.classList.remove("list-view");
+    // Update date picker
+    const dateInput = document.getElementById("datePicker");
+    if (dateInput) {
+      dateInput.value = dateString;
     }
+
+    // Load data for new date
+    this.loadData(dateString);
+    this.updateQuickButtons(dateString);
   },
 
-  showWeekendMessage() {
-    const container = document.getElementById("clickupTab");
-    container.innerHTML = `
-          <div class="weekend-message">
-              <i class="fas fa-calendar-week"></i>
-              <h2>Weekend Day</h2>
-              <p>Limited analysis available for weekends. Select a weekday for full team analytics.</p>
-              <button class="btn-primary" onclick="datePicker.setDateByDays(-1)">
-                  Go to Last Weekday
-              </button>
-          </div>
-      `;
+  updateQuickButtons(selectedDate = null) {
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+    const current = selectedDate || this.getCurrentDate();
+
+    document.querySelectorAll(".quick-date-btn").forEach((btn) => {
+      btn.classList.remove("active");
+      const days = parseInt(btn.getAttribute("data-days"));
+
+      if (days === 0 && current === today) {
+        btn.classList.add("active");
+      } else if (days === -1 && current === yesterday) {
+        btn.classList.add("active");
+      } else if (days === -7) {
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
+        if (current === weekAgo) {
+          btn.classList.add("active");
+        }
+      }
+    });
+  },
+
+  extractZoomRange(button) {
+    const onclick = button.getAttribute("onclick");
+    if (onclick) {
+      const match = onclick.match(/zoomTimeline\(['"]([^'"]+)['"]\)/);
+      return match ? match[1] : null;
+    }
+    return null;
+  },
+
+  getCurrentDate() {
+    const dateInput = document.getElementById("datePicker");
+    if (dateInput && dateInput.value) {
+      return dateInput.value;
+    }
+    return new Date().toISOString().split("T")[0];
+  },
+
+  getTodayDateTime(timeString) {
+    const today = new Date().toISOString().split("T")[0];
+    return `${today}T${timeString}:00`;
+  },
+
+  updateLastUpdated() {
+    const element = document.getElementById("lastUpdated");
+    if (element) {
+      const now = new Date();
+      element.textContent = `Last updated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`;
+    }
   },
 
   showLoading(show) {
@@ -541,57 +573,249 @@ window.dashboard = {
       }, 5000);
     }
 
-    utils.showNotification(message, "error");
-  },
-
-  updateLastUpdated() {
-    const element = document.getElementById("lastUpdated");
-    if (element) {
-      element.textContent = utils.formatTime(new Date());
+    // Also show a notification if utils is available
+    if (window.utils && window.utils.showNotification) {
+      utils.showNotification(message, "error");
     }
   },
 
   refreshData() {
-    this.loadData(datePicker.getSelectedDate());
-    utils.showNotification("Dashboard refreshed", "success");
+    console.log("Refreshing dashboard data...");
+    this.loadData();
+
+    if (window.utils && window.utils.showNotification) {
+      utils.showNotification("Dashboard refreshed", "success");
+    }
   },
 
   async exportData() {
     try {
-      const startDate = datePicker.getSelectedDate();
-      const endDate = datePicker.getSelectedDate();
-      await api.exportData(startDate, endDate, "csv");
-      utils.showNotification("Data exported successfully", "success");
+      console.log("Exporting dashboard data...");
+
+      // Prepare export data
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        date: this.getCurrentDate(),
+        dashboard_data: this.currentData,
+        timeline_data:
+          window.charts && window.charts.exportTimelineData ? charts.exportTimelineData() : null,
+      };
+
+      // Create and download file
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `clickup-dashboard-${this.getCurrentDate()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (window.utils && window.utils.showNotification) {
+        utils.showNotification("Data exported successfully", "success");
+      }
     } catch (error) {
-      utils.showNotification("Failed to export data", "error");
+      console.error("Export error:", error);
+      this.showError("Failed to export data");
     }
   },
 
   startAutoRefresh() {
     // Refresh every 5 minutes
     this.refreshInterval = setInterval(() => {
-      this.loadData(datePicker.getSelectedDate());
+      console.log("Auto-refreshing dashboard...");
+      this.loadData();
     }, 5 * 60 * 1000);
   },
 
   stopAutoRefresh() {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
     }
   },
 
-  // Modal handlers (placeholders)
-  showAddProjectModal() {
-    utils.showNotification("Add Project feature coming soon", "info");
+  // Task management functions
+  filterTasksByMember(memberName) {
+    const memberSections = document.querySelectorAll(".member-section");
+
+    memberSections.forEach((section) => {
+      const header = section.querySelector(".member-name");
+      if (header) {
+        const sectionMember = header.textContent.trim();
+        if (memberName === "all" || sectionMember.includes(memberName)) {
+          section.style.display = "";
+        } else {
+          section.style.display = "none";
+        }
+      }
+    });
   },
 
-  showAddWebsiteModal() {
-    utils.showNotification("Add Website feature coming soon", "info");
+  filterTasksByStatus(status) {
+    const taskRows = document.querySelectorAll(".task-row");
+
+    taskRows.forEach((row) => {
+      const statusElement = row.querySelector(".task-status");
+      if (statusElement) {
+        const taskStatus = statusElement.textContent.trim().toLowerCase();
+        if (status === "all" || taskStatus.includes(status.toLowerCase())) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      }
+    });
+  },
+
+  highlightLongRunningTasks(hoursThreshold = 4) {
+    const timeBlocks = document.querySelectorAll(".time-block");
+
+    timeBlocks.forEach((block) => {
+      const title = block.getAttribute("title");
+      const durationMatch = title.match(/\((\d+\.?\d*)h\)/);
+
+      if (durationMatch) {
+        const duration = parseFloat(durationMatch[1]);
+        if (duration >= hoursThreshold) {
+          block.classList.add("long-running");
+          block.style.border = "2px solid #f59e0b";
+          block.style.boxShadow = "0 0 10px rgba(245, 158, 11, 0.5)";
+        }
+      }
+    });
+  },
+
+  // Analytics and insights
+  generateInsights() {
+    if (!this.currentData || !this.currentData.detailed_data) {
+      return [];
+    }
+
+    const insights = [];
+    const members = Object.entries(this.currentData.detailed_data);
+
+    // Most productive member
+    let mostProductiveMember = null;
+    let maxHours = 0;
+
+    members.forEach(([name, data]) => {
+      const hours = data.total_active_hours || 0;
+      if (hours > maxHours) {
+        maxHours = hours;
+        mostProductiveMember = name;
+      }
+    });
+
+    if (mostProductiveMember) {
+      insights.push({
+        type: "positive",
+        title: "Most Productive Today",
+        message: `${mostProductiveMember} with ${maxHours.toFixed(1)} hours of active work`,
+      });
+    }
+
+    // Project diversity analysis
+    const allProjects = new Set();
+    members.forEach(([name, data]) => {
+      if (data.task_details) {
+        data.task_details.forEach((task) => {
+          if (task.project_name) {
+            allProjects.add(task.project_name);
+          }
+        });
+      }
+    });
+
+    insights.push({
+      type: "info",
+      title: "Project Diversity",
+      message: `Team is working on ${allProjects.size} different projects today`,
+    });
+
+    // Task completion rate estimate
+    const totalTasks = this.currentData.team_metrics?.total_tasks || 0;
+    const activeTasks = this.currentData.team_metrics?.total_active_tasks || 0;
+
+    if (totalTasks > 0) {
+      const activePercent = ((activeTasks / totalTasks) * 100).toFixed(1);
+      insights.push({
+        type: "metric",
+        title: "Task Activity Rate",
+        message: `${activePercent}% of tasks are currently active`,
+      });
+    }
+
+    return insights;
+  },
+
+  displayInsights() {
+    const insights = this.generateInsights();
+    const container = document.getElementById("insightsContainer");
+
+    if (!container || insights.length === 0) return;
+
+    container.innerHTML = insights
+      .map(
+        (insight) => `
+          <div class="insight-item insight-${insight.type}">
+              <h4>${insight.title}</h4>
+              <p>${insight.message}</p>
+          </div>
+      `
+      )
+      .join("");
+  },
+
+  // Cleanup and destroy
+  destroy() {
+    this.stopAutoRefresh();
+
+    if (window.charts && window.charts.destroy) {
+      charts.destroy();
+    }
+
+    // Remove event listeners
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.removeEventListener("click", this.switchTab);
+    });
+
+    console.log("Dashboard destroyed");
   },
 };
 
+// Global functions for button interactions
+function refreshData() {
+  if (window.dashboard) {
+    window.dashboard.refreshData();
+  }
+}
+
+function exportData() {
+  if (window.dashboard) {
+    window.dashboard.exportData();
+  }
+}
+
+function zoomTimeline(range) {
+  if (window.charts && window.charts.zoomTimeline) {
+    charts.zoomTimeline(range);
+  }
+}
+
+function toggleMemberView(viewType) {
+  console.log("Toggle member view:", viewType);
+  // Implementation for member view toggle
+}
+
 // Initialize dashboard when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM loaded, initializing dashboard...");
+
   // Wait a bit for all scripts to load
   setTimeout(() => {
     if (window.dashboard) {
@@ -600,4 +824,11 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Dashboard module not properly loaded");
     }
   }, 100);
+});
+
+// Handle page unload
+window.addEventListener("beforeunload", () => {
+  if (window.dashboard && window.dashboard.destroy) {
+    dashboard.destroy();
+  }
 });
