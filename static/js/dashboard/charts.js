@@ -1,92 +1,133 @@
-class ChartManager {
-  constructor() {
-    this.charts = {};
-  }
+// Enhanced Charts module for managing all chart instances with ClickUp timeline support
+window.charts = {
+  instances: {},
 
-  renderAll(data) {
-    this.renderTimelineChart(data);
-    this.renderActivityChart(data);
-    this.renderStatusChart(data);
-    this.renderTaskAgeChart(data);
-    this.renderMilestoneChart(data);
-  }
+  init() {
+    // Set chart defaults for modern look
+    Chart.defaults.font.family =
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue(
+      "--text-secondary"
+    );
+    Chart.defaults.borderColor = getComputedStyle(document.documentElement).getPropertyValue(
+      "--border-color"
+    );
 
-  renderTimelineChart(data) {
+    // Update defaults when theme changes
+    this.updateChartDefaults();
+  },
+
+  updateChartDefaults() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    Chart.defaults.color = isDark ? "#cbd5e1" : "#6b7280";
+    Chart.defaults.borderColor = isDark ? "#334155" : "#e5e7eb";
+    Chart.defaults.plugins.legend.labels.color = isDark ? "#cbd5e1" : "#6b7280";
+    Chart.defaults.scale.grid.color = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)";
+    Chart.defaults.scale.grid.borderColor = isDark ? "#334155" : "#e5e7eb";
+  },
+
+  createTimelineChart(data) {
     const ctx = document.getElementById("timelineChart");
     if (!ctx) return;
 
-    if (this.charts.timeline) {
-      this.charts.timeline.destroy();
+    if (this.instances.timeline) {
+      this.instances.timeline.destroy();
     }
 
-    const members = Object.keys(data.detailed_data || {});
-    if (members.length === 0) {
-      this.drawNoDataMessage(ctx, "No timeline data available");
+    console.log("Creating timeline chart with data:", data);
+
+    // Prepare timeline data
+    const datasets = this.prepareTimelineData(data);
+    console.log("Timeline datasets:", datasets);
+
+    // If no datasets, show a message
+    if (datasets.length === 0) {
+      ctx.parentElement.innerHTML =
+        '<div class="no-data-message">No activity data available for the selected date</div>';
       return;
     }
 
-    const datasets = [];
+    // Get the selected date for the scale
+    const selectedDate = window.datePicker
+      ? datePicker.getSelectedDate()
+      : new Date().toISOString().split("T")[0];
+    const minTime = new Date(`${selectedDate}T09:00:00`);
+    const maxTime = new Date(`${selectedDate}T18:00:00`);
 
-    members.forEach((member, index) => {
-      const memberData = data.detailed_data[member];
+    // Validate time range
+    if (isNaN(minTime.getTime()) || isNaN(maxTime.getTime())) {
+      console.error("Invalid date range for timeline chart");
+      return;
+    }
 
-      // Active periods
-      (memberData.in_progress_periods || []).forEach((period) => {
-        const start = new Date(period.start);
-        const end = new Date(period.end);
-
-        datasets.push({
-          label: `${member} - Active`,
-          data: [
-            {
-              x: start.getTime(),
-              y: index,
-              x2: end.getTime(),
-              duration: period.duration_hours,
-              task: period.task_name,
-              taskAge: period.task_age,
-              isMilestone: period.is_milestone,
-            },
-          ],
-          backgroundColor: window.dashboard.colors.success,
-          borderColor: window.dashboard.colors.success,
-          borderWidth: 6,
-          pointRadius: 0,
-          showLine: false,
-        });
-      });
-
-      // Downtime periods
-      (memberData.downtime_periods || []).forEach((period) => {
-        const start = new Date(period.start);
-        const end = new Date(period.end);
-
-        datasets.push({
-          label: `${member} - Downtime`,
-          data: [
-            {
-              x: start.getTime(),
-              y: index,
-              x2: end.getTime(),
-              duration: period.duration_hours,
-              type: period.type,
-            },
-          ],
-          backgroundColor: window.dashboard.colors.danger,
-          borderColor: window.dashboard.colors.danger,
-          borderWidth: 6,
-          pointRadius: 0,
-          showLine: false,
-        });
-      });
-    });
-
-    this.charts.timeline = new Chart(ctx, {
+    this.instances.timeline = new Chart(ctx, {
       type: "scatter",
       data: { datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              usePointStyle: true,
+              padding: 20,
+              generateLabels: (chart) => {
+                return [
+                  {
+                    text: "Active Period",
+                    fillStyle: "#10b981",
+                    strokeStyle: "#10b981",
+                    lineWidth: 0,
+                    pointStyle: "rect",
+                  },
+                  {
+                    text: "Downtime",
+                    fillStyle: "#ef4444",
+                    strokeStyle: "#ef4444",
+                    lineWidth: 0,
+                    pointStyle: "rect",
+                  },
+                ];
+              },
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(30, 41, 59, 0.9)",
+            titleColor: "#f1f5f9",
+            bodyColor: "#cbd5e1",
+            borderColor: "#334155",
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              title: function (context) {
+                const point = context[0];
+                return point.dataset.memberName || "Unknown Member";
+              },
+              label: function (context) {
+                const data = context.raw;
+                if (!data) return "";
+
+                const start = new Date(data.x);
+                const end = new Date(data.x2);
+                const duration = (data.x2 - data.x) / (1000 * 60 * 60); // Convert to hours
+
+                let label = `Duration: ${utils.formatDuration(duration)}`;
+                if (data.task) {
+                  label += `\nTask: ${data.task}`;
+                }
+                if (data.type) {
+                  label += `\nType: ${data.type}`;
+                }
+                label += `\nTime: ${utils.formatTime(start)} - ${utils.formatTime(end)}`;
+
+                return label;
+              },
+            },
+          },
+        },
         scales: {
           x: {
             type: "time",
@@ -95,24 +136,35 @@ class ChartManager {
               displayFormats: {
                 hour: "HH:mm",
               },
+              stepSize: 1,
+            },
+            min: minTime.getTime(),
+            max: maxTime.getTime(),
+            grid: {
+              display: true,
+              drawBorder: false,
+            },
+            ticks: {
+              maxRotation: 0,
+              callback: function (value) {
+                const date = new Date(value);
+                return date.getHours().toString().padStart(2, "0") + ":00";
+              },
             },
             title: {
               display: true,
               text: "Time of Day",
             },
-            min: new Date(data.date + "T08:00:00").getTime(),
-            max: new Date(data.date + "T18:00:00").getTime(),
           },
           y: {
-            type: "linear",
-            position: "left",
-            min: -0.5,
-            max: members.length - 0.5,
+            type: "category",
+            labels: this.getMemberNames(data),
+            grid: {
+              display: false,
+              drawBorder: false,
+            },
             ticks: {
-              callback: function (value) {
-                return members[Math.round(value)] || "";
-              },
-              stepSize: 1,
+              padding: 8,
             },
             title: {
               display: true,
@@ -120,180 +172,201 @@ class ChartManager {
             },
           },
         },
-        plugins: {
-          legend: {
-            display: false,
-          },
-          tooltip: {
-            callbacks: {
-              title: function (context) {
-                return context[0].dataset.label;
-              },
-              label: function (context) {
-                const data = context.raw;
-                let label = `Duration: ${data.duration?.toFixed(1) || 0} hours`;
-
-                if (data.task) {
-                  label += `\nTask: ${data.task}`;
-                  if (data.taskAge) {
-                    label += `\nAge: ${data.taskAge} days`;
-                  }
-                  if (data.isMilestone) {
-                    label += `\nMilestone Task`;
-                  }
-                }
-                if (data.type) {
-                  label += `\nType: ${data.type}`;
-                }
-                return label;
-              },
-            },
-          },
+        onHover: (event, activeElements) => {
+          event.native.target.style.cursor = activeElements.length > 0 ? "pointer" : "default";
         },
       },
     });
-  }
+  },
 
-  renderActivityChart(data) {
+  getMemberNames(detailedData) {
+    return Object.keys(detailedData || {});
+  },
+
+  prepareTimelineData(detailedData) {
+    const datasets = [];
+    const colors = {
+      active: "#10b981",
+      downtime: "#ef4444",
+      warning: "#f59e0b",
+    };
+
+    // Get all team members
+    const members = Object.keys(detailedData || {});
+    console.log("Processing members:", members);
+
+    if (members.length === 0) {
+      return datasets;
+    }
+
+    members.forEach((memberName, memberIndex) => {
+      const memberData = detailedData[memberName];
+      console.log(`Processing ${memberName}:`, memberData);
+
+      // Active periods
+      if (memberData.in_progress_periods && memberData.in_progress_periods.length > 0) {
+        const activeData = [];
+
+        memberData.in_progress_periods.forEach((period) => {
+          try {
+            const startTime = new Date(period.start);
+            const endTime = new Date(period.end);
+
+            if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+              activeData.push({
+                x: startTime.getTime(),
+                y: memberName,
+                x2: endTime.getTime(),
+                task: period.task_name || "Task",
+                duration: period.duration_hours || 0,
+                status: period.status || "active",
+              });
+            }
+          } catch (error) {
+            console.warn(`Error processing active period for ${memberName}:`, error, period);
+          }
+        });
+
+        if (activeData.length > 0) {
+          datasets.push({
+            label: `${memberName} - Active`,
+            memberName: memberName,
+            data: activeData,
+            backgroundColor: colors.active,
+            borderColor: colors.active,
+            borderWidth: 0,
+            pointRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60); // hours
+              return Math.max(8, Math.min(20, duration * 3)); // Scale point size with duration
+            },
+            pointHoverRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60);
+              return Math.max(10, Math.min(25, duration * 3 + 2));
+            },
+            showLine: false,
+          });
+        }
+      }
+
+      // Downtime periods
+      if (memberData.downtime_periods && memberData.downtime_periods.length > 0) {
+        const downtimeData = [];
+
+        memberData.downtime_periods.forEach((period) => {
+          try {
+            const startTime = new Date(period.start);
+            const endTime = new Date(period.end);
+
+            if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+              // Choose color based on duration
+              let color = colors.downtime;
+              if (period.duration_hours < 2) {
+                color = colors.warning;
+              }
+
+              downtimeData.push({
+                x: startTime.getTime(),
+                y: memberName,
+                x2: endTime.getTime(),
+                duration: period.duration_hours || 0,
+                type: period.type || "downtime",
+                color: color,
+              });
+            }
+          } catch (error) {
+            console.warn(`Error processing downtime period for ${memberName}:`, error, period);
+          }
+        });
+
+        if (downtimeData.length > 0) {
+          datasets.push({
+            label: `${memberName} - Downtime`,
+            memberName: memberName,
+            data: downtimeData,
+            backgroundColor: (context) => {
+              return context.raw?.color || colors.downtime;
+            },
+            borderColor: colors.downtime,
+            borderWidth: 0,
+            pointRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60);
+              return Math.max(6, Math.min(18, duration * 2));
+            },
+            pointHoverRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60);
+              return Math.max(8, Math.min(22, duration * 2 + 2));
+            },
+            showLine: false,
+          });
+        }
+      }
+
+      // If no activity at all, show a placeholder
+      const hasActivity =
+        (memberData.in_progress_periods && memberData.in_progress_periods.length > 0) ||
+        (memberData.downtime_periods && memberData.downtime_periods.length > 0);
+
+      if (!hasActivity) {
+        const selectedDate = window.datePicker
+          ? datePicker.getSelectedDate()
+          : new Date().toISOString().split("T")[0];
+        const dayStart = new Date(`${selectedDate}T09:00:00`).getTime();
+
+        datasets.push({
+          label: `${memberName} - No Data`,
+          memberName: memberName,
+          data: [
+            {
+              x: dayStart,
+              y: memberName,
+              x2: dayStart,
+              type: "no_data",
+            },
+          ],
+          backgroundColor: "#9ca3af",
+          borderColor: "#9ca3af",
+          borderWidth: 0,
+          pointRadius: 4,
+          showLine: false,
+        });
+      }
+    });
+
+    console.log("Final datasets:", datasets);
+    return datasets;
+  },
+
+  createActivityChart(metrics) {
     const ctx = document.getElementById("activityChart");
     if (!ctx) return;
 
-    if (this.charts.activity) {
-      this.charts.activity.destroy();
+    if (this.instances.activity) {
+      this.instances.activity.destroy();
     }
 
-    const members = Object.keys(data.detailed_data || {});
-    if (members.length === 0) {
-      this.drawNoDataMessage(ctx, "No activity data available");
-      return;
-    }
+    const activeHours = metrics.total_active_hours || 0;
+    const downtimeHours = metrics.total_downtime_hours || 0;
+    const expectedHours = metrics.expected_working_hours || 0;
 
-    const activeHours = members.map((member) => {
-      const memberData = data.detailed_data[member];
-      return (memberData.in_progress_periods || []).reduce((sum, period) => {
-        let duration = period.duration_hours;
+    console.log("Activity chart data:", { activeHours, downtimeHours, expectedHours });
 
-        if (duration === undefined && period.start && period.end) {
-          const start = new Date(period.start);
-          const end = new Date(period.end);
-          duration = (end - start) / (1000 * 60 * 60);
-        }
+    // Create a doughnut chart showing active vs downtime vs remaining expected
+    const remainingHours = Math.max(0, expectedHours - activeHours - downtimeHours);
 
-        return sum + Math.abs(duration || 0);
-      }, 0);
-    });
-
-    const downtimeHours = members.map((member) => {
-      const memberData = data.detailed_data[member];
-      return (memberData.downtime_periods || []).reduce(
-        (sum, period) => sum + (period.duration_hours || 0),
-        0
-      );
-    });
-
-    this.charts.activity = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: members,
-        datasets: [
-          {
-            label: "Active Hours",
-            data: activeHours,
-            backgroundColor: window.dashboard.colors.success,
-            borderColor: window.dashboard.colors.success,
-            borderWidth: 1,
-          },
-          {
-            label: "Downtime Hours",
-            data: downtimeHours,
-            backgroundColor: window.dashboard.colors.danger,
-            borderColor: window.dashboard.colors.danger,
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            stacked: false,
-            grid: {
-              display: false,
-            },
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: "Hours",
-            },
-          },
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: "top",
-          },
-          tooltip: {
-            callbacks: {
-              label: function (context) {
-                return `${context.dataset.label}: ${context.raw.toFixed(1)} hours`;
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  renderStatusChart(data) {
-    const ctx = document.getElementById("statusChart");
-    if (!ctx) return;
-
-    if (this.charts.status) {
-      this.charts.status.destroy();
-    }
-
-    const members = Object.keys(data.detailed_data || {});
-    if (members.length === 0) {
-      this.drawNoDataMessage(ctx, "No status data available");
-      return;
-    }
-
-    let goodCount = 0,
-      warningCount = 0,
-      criticalCount = 0;
-
-    members.forEach((member) => {
-      const memberData = data.detailed_data[member];
-      const totalDowntime = (memberData.downtime_periods || []).reduce(
-        (sum, period) => sum + (period.duration_hours || 0),
-        0
-      );
-
-      if (totalDowntime >= 4) criticalCount++;
-      else if (totalDowntime >= 3) warningCount++;
-      else goodCount++;
-    });
-
-    ctx.style.height = "400px";
-    ctx.height = 400;
-
-    this.charts.status = new Chart(ctx, {
+    this.instances.activity = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: ["Good", "Warning", "Critical"],
+        labels: ["Active Hours", "Downtime Hours", "Remaining Expected"],
         datasets: [
           {
-            data: [goodCount, warningCount, criticalCount],
-            backgroundColor: [
-              window.dashboard.colors.success,
-              window.dashboard.colors.warning,
-              window.dashboard.colors.danger,
-            ],
+            data: [activeHours, downtimeHours, remainingHours],
+            backgroundColor: ["#10b981", "#ef4444", "#6b7280"],
             borderWidth: 2,
-            borderColor: ctx.style.backgroundColor || "#fff",
+            borderColor: "#ffffff",
           },
         ],
       },
@@ -304,157 +377,152 @@ class ChartManager {
           legend: {
             position: "bottom",
             labels: {
-              boxWidth: 12,
+              padding: 20,
+              usePointStyle: true,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(30, 41, 59, 0.9)",
+            titleColor: "#f1f5f9",
+            bodyColor: "#cbd5e1",
+            borderColor: "#334155",
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              label: (context) => {
+                const value = context.parsed || 0;
+                const total = activeHours + downtimeHours + remainingHours;
+                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                return `${context.label}: ${value.toFixed(1)}h (${percentage}%)`;
+              },
             },
           },
         },
-        layout: {
-          padding: {
-            top: 20,
-            bottom: 20,
-            left: 20,
-            right: 20,
-          },
-        },
+        cutout: "60%",
       },
     });
-  }
+  },
 
-  renderTaskAgeChart(data) {
-    const ctx = document.getElementById("taskAgeChart");
+  createMemberStatusChart(detailedData) {
+    const ctx = document.getElementById("memberStatusChart");
     if (!ctx) return;
 
-    if (this.charts.taskAge) {
-      this.charts.taskAge.destroy();
+    if (this.instances.memberStatus) {
+      this.instances.memberStatus.destroy();
     }
 
-    const members = Object.keys(data.detailed_data || {});
-    if (members.length === 0) {
-      this.drawNoDataMessage(ctx, "No task data available");
-      return;
-    }
+    // Prepare data for horizontal bar chart
+    const members = Object.entries(detailedData).map(([name, data]) => ({
+      name,
+      active: data.total_active_hours || 0,
+      downtime: data.total_downtime_hours || 0,
+      tasks: data.total_tasks || 0,
+    }));
 
-    let veryOld = 0,
-      old = 0,
-      moderate = 0,
-      newTasks = 0;
+    // Sort by total activity (active hours - downtime hours)
+    members.sort((a, b) => b.active - b.downtime - (a.active - a.downtime));
 
-    members.forEach((member) => {
-      const memberData = data.detailed_data[member];
-      veryOld += memberData.task_metrics?.tasks_by_age?.very_old || 0;
-      old += memberData.task_metrics?.tasks_by_age?.old || 0;
-      moderate += memberData.task_metrics?.tasks_by_age?.moderate || 0;
-      newTasks += memberData.task_metrics?.tasks_by_age?.new || 0;
-    });
-
-    this.charts.taskAge = new Chart(ctx, {
+    this.instances.memberStatus = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: ["Very Old (14+ days)", "Old (7-14 days)", "Moderate (3-7 days)", "New (<3 days)"],
+        labels: members.map((m) => m.name),
         datasets: [
           {
-            data: [veryOld, old, moderate, newTasks],
-            backgroundColor: [
-              window.dashboard.colors.veryOld,
-              window.dashboard.colors.old,
-              window.dashboard.colors.moderate,
-              window.dashboard.colors.new,
-            ],
-            borderWidth: 1,
+            label: "Active Hours",
+            data: members.map((m) => m.active),
+            backgroundColor: "#10b981",
+            borderRadius: 4,
+          },
+          {
+            label: "Downtime Hours",
+            data: members.map((m) => m.downtime),
+            backgroundColor: "#ef4444",
+            borderRadius: 4,
           },
         ],
       },
       options: {
+        indexAxis: "y",
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: "Number of Tasks",
+        plugins: {
+          legend: {
+            position: "top",
+          },
+          tooltip: {
+            callbacks: {
+              afterBody: (context) => {
+                const memberIndex = context[0].dataIndex;
+                const member = members[memberIndex];
+                return `Tasks: ${member.tasks}`;
+              },
             },
           },
+        },
+        scales: {
           x: {
+            beginAtZero: true,
+            stacked: false,
+            ticks: {
+              callback: (value) => value + "h",
+            },
+            grid: {
+              display: true,
+            },
+          },
+          y: {
+            stacked: false,
             grid: {
               display: false,
             },
           },
         },
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
       },
     });
+  },
 
-    const taskAgeList = document.getElementById("taskAgeList");
-    taskAgeList.innerHTML = `
-            <div class="task-age-item">
-                <div class="task-age-label">
-                    <span class="task-age-badge badge-very-old"></span>
-                    <span>Very Old Tasks</span>
-                </div>
-                <span>${veryOld}</span>
-            </div>
-            <div class="task-age-item">
-                <div class="task-age-label">
-                    <span class="task-age-badge badge-old"></span>
-                    <span>Old Tasks</span>
-                </div>
-                <span>${old}</span>
-            </div>
-            <div class="task-age-item">
-                <div class="task-age-label">
-                    <span class="task-age-badge badge-moderate"></span>
-                    <span>Moderate Tasks</span>
-                </div>
-                <span>${moderate}</span>
-            </div>
-            <div class="task-age-item">
-                <div class="task-age-label">
-                    <span class="task-age-badge badge-new"></span>
-                    <span>New Tasks</span>
-                </div>
-                <span>${newTasks}</span>
-            </div>
-        `;
-  }
-
-  renderMilestoneChart(data) {
-    const ctx = document.getElementById("milestoneChart");
+  createStatusChart(detailedData) {
+    const ctx = document.getElementById("statusChart");
     if (!ctx) return;
 
-    if (this.charts.milestone) {
-      this.charts.milestone.destroy();
+    if (this.instances.status) {
+      this.instances.status.destroy();
     }
 
-    const members = Object.keys(data.detailed_data || {});
+    const members = Object.keys(detailedData || {});
     if (members.length === 0) {
-      this.drawNoDataMessage(ctx, "No milestone data available");
+      ctx.parentElement.innerHTML = '<div class="no-data-message">No status data available</div>';
       return;
     }
 
-    let milestoneTasks = 0;
-    let totalTasks = 0;
+    let goodCount = 0,
+      warningCount = 0,
+      criticalCount = 0;
 
     members.forEach((member) => {
-      const memberData = data.detailed_data[member];
-      milestoneTasks += memberData.task_metrics?.milestone_tasks || 0;
-      totalTasks += memberData.task_metrics?.total_tasks || 0;
+      const memberData = detailedData[member];
+      const totalDowntime = memberData.total_downtime_hours || 0;
+
+      if (totalDowntime >= 4) {
+        criticalCount++;
+      } else if (totalDowntime >= 2) {
+        warningCount++;
+      } else {
+        goodCount++;
+      }
     });
 
-    this.charts.milestone = new Chart(ctx, {
-      type: "doughnut",
+    this.instances.status = new Chart(ctx, {
+      type: "pie",
       data: {
-        labels: ["Milestone Tasks", "Regular Tasks"],
+        labels: ["Good (< 2h downtime)", "Warning (2-4h downtime)", "Critical (4h+ downtime)"],
         datasets: [
           {
-            data: [milestoneTasks, totalTasks - milestoneTasks],
-            backgroundColor: [window.dashboard.colors.milestone, "#e5e7eb"],
+            data: [goodCount, warningCount, criticalCount],
+            backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
             borderWidth: 2,
-            borderColor: "#fff",
+            borderColor: "#ffffff",
           },
         ],
       },
@@ -463,8 +531,11 @@ class ChartManager {
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: true,
             position: "bottom",
+            labels: {
+              padding: 15,
+              usePointStyle: true,
+            },
           },
           tooltip: {
             callbacks: {
@@ -479,50 +550,133 @@ class ChartManager {
         },
       },
     });
+  },
 
-    const milestoneStats = document.getElementById("milestoneStats");
-    if (milestoneTasks > 0) {
-      milestoneStats.innerHTML = `
-                <div style="font-size: 0.9rem;">
-                    <strong>${milestoneTasks}</strong> milestone tasks out of <strong>${totalTasks}</strong> total tasks
-                </div>
-            `;
-    } else {
-      milestoneStats.innerHTML = `
-                <div style="font-size: 0.9rem; color: #6b7280;">
-                    No milestone tasks found
-                </div>
-            `;
+  createTaskDistributionChart(detailedData) {
+    const ctx = document.getElementById("taskDistributionChart");
+    if (!ctx) return;
+
+    if (this.instances.taskDistribution) {
+      this.instances.taskDistribution.destroy();
     }
-  }
 
-  updateTheme() {
-    Object.values(this.charts).forEach((chart) => {
-      if (chart && chart.options?.scales) {
-        const gridColor =
-          document.documentElement.getAttribute("data-theme") === "dark"
-            ? "rgba(255, 255, 255, 0.1)"
-            : "rgba(0, 0, 0, 0.1)";
+    const members = Object.entries(detailedData).map(([name, data]) => ({
+      name,
+      activeTasks: data.active_tasks || 0,
+      totalTasks: data.total_tasks || 0,
+    }));
 
-        if (chart.options.scales.x) chart.options.scales.x.grid.color = gridColor;
-        if (chart.options.scales.y) chart.options.scales.y.grid.color = gridColor;
-        chart.update();
-      }
+    members.sort((a, b) => b.totalTasks - a.totalTasks);
+
+    this.instances.taskDistribution = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: members.map((m) => m.name),
+        datasets: [
+          {
+            label: "Active Tasks",
+            data: members.map((m) => m.activeTasks),
+            backgroundColor: "#3b82f6",
+            borderRadius: 4,
+          },
+          {
+            label: "Total Tasks",
+            data: members.map((m) => m.totalTasks),
+            backgroundColor: "#e5e7eb",
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top",
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+            },
+          },
+        },
+      },
     });
-  }
+  },
 
-  resizeAll() {
-    Object.values(this.charts).forEach((chart) => {
+  updateAll(data) {
+    console.log("Updating all charts with data:", data);
+
+    if (data.detailed_data) {
+      this.createTimelineChart(data.detailed_data);
+      this.createStatusChart(data.detailed_data);
+      this.createMemberStatusChart(data.detailed_data);
+      this.createTaskDistributionChart(data.detailed_data);
+    }
+
+    if (data.team_metrics) {
+      this.createActivityChart(data.team_metrics);
+    }
+  },
+
+  zoomTimeline(range) {
+    if (!this.instances.timeline) return;
+
+    const chart = this.instances.timeline;
+    const selectedDate = window.datePicker
+      ? datePicker.getSelectedDate()
+      : new Date().toISOString().split("T")[0];
+    let min, max;
+
+    switch (range) {
+      case "hour":
+        const now = new Date();
+        min = new Date(
+          `${selectedDate}T${(now.getHours() - 1).toString().padStart(2, "0")}:00:00`
+        ).getTime();
+        max = new Date(
+          `${selectedDate}T${now.getHours().toString().padStart(2, "0")}:59:59`
+        ).getTime();
+        break;
+      case "morning":
+        min = new Date(`${selectedDate}T09:00:00`).getTime();
+        max = new Date(`${selectedDate}T12:00:00`).getTime();
+        break;
+      case "afternoon":
+        min = new Date(`${selectedDate}T13:00:00`).getTime();
+        max = new Date(`${selectedDate}T18:00:00`).getTime();
+        break;
+      default:
+        min = new Date(`${selectedDate}T09:00:00`).getTime();
+        max = new Date(`${selectedDate}T18:00:00`).getTime();
+    }
+
+    chart.options.scales.x.min = min;
+    chart.options.scales.x.max = max;
+    chart.update();
+
+    // Update button states
+    document.querySelectorAll(".chart-actions .chart-btn").forEach((btn) => {
+      btn.classList.remove("active");
+    });
+    if (event && event.target) {
+      event.target.classList.add("active");
+    }
+  },
+
+  resize() {
+    Object.values(this.instances).forEach((chart) => {
       if (chart) chart.resize();
     });
-  }
+  },
 
-  drawNoDataMessage(canvas, message) {
-    const ctx = canvas.getContext("2d");
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillStyle =
-      document.documentElement.getAttribute("data-theme") === "dark" ? "#ffffff" : "#666666";
-    ctx.fillText(message, canvas.width / 2, canvas.height / 2);
-  }
-}
+  destroy() {
+    Object.values(this.instances).forEach((chart) => {
+      if (chart) chart.destroy();
+    });
+    this.instances = {};
+  },
+};

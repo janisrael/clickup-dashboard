@@ -1,4 +1,4 @@
-// Charts module for managing all chart instances
+// Enhanced Charts module for managing all chart instances with ClickUp timeline support
 window.charts = {
   instances: {},
 
@@ -19,12 +19,9 @@ window.charts = {
 
   updateChartDefaults() {
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-
     Chart.defaults.color = isDark ? "#cbd5e1" : "#6b7280";
     Chart.defaults.borderColor = isDark ? "#334155" : "#e5e7eb";
     Chart.defaults.plugins.legend.labels.color = isDark ? "#cbd5e1" : "#6b7280";
-
-    // Grid styling
     Chart.defaults.scale.grid.color = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)";
     Chart.defaults.scale.grid.borderColor = isDark ? "#334155" : "#e5e7eb";
   },
@@ -37,7 +34,11 @@ window.charts = {
       this.instances.timeline.destroy();
     }
 
+    console.log("Creating timeline chart with data:", data);
+
+    // Prepare timeline data
     const datasets = this.prepareTimelineData(data);
+    console.log("Timeline datasets:", datasets);
 
     // If no datasets, show a message
     if (datasets.length === 0) {
@@ -50,26 +51,25 @@ window.charts = {
     const selectedDate = window.datePicker
       ? datePicker.getSelectedDate()
       : new Date().toISOString().split("T")[0];
-    const minTime = new Date(`${selectedDate}T09:00:00`).getTime();
-    const maxTime = new Date(`${selectedDate}T17:00:00`).getTime();
+    const minTime = new Date(`${selectedDate}T09:00:00`);
+    const maxTime = new Date(`${selectedDate}T18:00:00`);
 
     // Validate time range
-    if (isNaN(minTime) || isNaN(maxTime)) {
+    if (isNaN(minTime.getTime()) || isNaN(maxTime.getTime())) {
       console.error("Invalid date range for timeline chart");
       return;
     }
 
     this.instances.timeline = new Chart(ctx, {
-      type: "bar",
+      type: "scatter",
       data: { datasets },
       options: {
-        indexAxis: "y",
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
             display: true,
-            position: "bottom",
+            position: "top",
             labels: {
               usePointStyle: true,
               padding: 20,
@@ -102,15 +102,28 @@ window.charts = {
             padding: 12,
             cornerRadius: 8,
             callbacks: {
-              label: (context) => {
-                if (!context.raw || !context.raw.x) return "";
-                const duration = (context.raw.x[1] - context.raw.x[0]) / (1000 * 60 * 60);
-                if (context.dataset.label && context.dataset.label.includes("Active")) {
-                  return `Active: ${utils.formatDuration(duration)} - ${
-                    context.raw.task || "Task"
-                  }`;
+              title: function (context) {
+                const point = context[0];
+                return point.dataset.memberName || "Unknown Member";
+              },
+              label: function (context) {
+                const data = context.raw;
+                if (!data) return "";
+
+                const start = new Date(data.x);
+                const end = new Date(data.x2);
+                const duration = (data.x2 - data.x) / (1000 * 60 * 60); // Convert to hours
+
+                let label = `Duration: ${utils.formatDuration(duration)}`;
+                if (data.task) {
+                  label += `\nTask: ${data.task}`;
                 }
-                return `Downtime: ${utils.formatDuration(duration)}`;
+                if (data.type) {
+                  label += `\nType: ${data.type}`;
+                }
+                label += `\nTime: ${utils.formatTime(start)} - ${utils.formatTime(end)}`;
+
+                return label;
               },
             },
           },
@@ -120,11 +133,13 @@ window.charts = {
             type: "time",
             time: {
               unit: "hour",
-              displayFormats: { hour: "HH:mm" },
-              stepSize: 2,
+              displayFormats: {
+                hour: "HH:mm",
+              },
+              stepSize: 1,
             },
-            min: minTime,
-            max: maxTime,
+            min: minTime.getTime(),
+            max: maxTime.getTime(),
             grid: {
               display: true,
               drawBorder: false,
@@ -133,11 +148,17 @@ window.charts = {
               maxRotation: 0,
               callback: function (value) {
                 const date = new Date(value);
-                return date.getHours() + ":00";
+                return date.getHours().toString().padStart(2, "0") + ":00";
               },
+            },
+            title: {
+              display: true,
+              text: "Time of Day",
             },
           },
           y: {
+            type: "category",
+            labels: this.getMemberNames(data),
             grid: {
               display: false,
               drawBorder: false,
@@ -145,10 +166,21 @@ window.charts = {
             ticks: {
               padding: 8,
             },
+            title: {
+              display: true,
+              text: "Team Members",
+            },
           },
+        },
+        onHover: (event, activeElements) => {
+          event.native.target.style.cursor = activeElements.length > 0 ? "pointer" : "default";
         },
       },
     });
+  },
+
+  getMemberNames(detailedData) {
+    return Object.keys(detailedData || {});
   },
 
   prepareTimelineData(detailedData) {
@@ -156,95 +188,155 @@ window.charts = {
     const colors = {
       active: "#10b981",
       downtime: "#ef4444",
+      warning: "#f59e0b",
     };
 
     // Get all team members
-    const allMembers = Object.keys(detailedData);
+    const members = Object.keys(detailedData || {});
+    console.log("Processing members:", members);
 
-    // If no data, return empty datasets
-    if (allMembers.length === 0) {
+    if (members.length === 0) {
       return datasets;
     }
 
-    // Get the selected date for default time range
-    const selectedDate = window.datePicker
-      ? datePicker.getSelectedDate()
-      : new Date().toISOString().split("T")[0];
-    const defaultStart = new Date(`${selectedDate}T09:00:00`).getTime();
-    const defaultEnd = new Date(`${selectedDate}T17:00:00`).getTime();
-
-    // Create datasets for each member
-    allMembers.forEach((name) => {
-      const data = detailedData[name] || { in_progress_periods: [], downtime_periods: [] };
+    members.forEach((memberName, memberIndex) => {
+      const memberData = detailedData[memberName];
+      console.log(`Processing ${memberName}:`, memberData);
 
       // Active periods
-      if (data.in_progress_periods && data.in_progress_periods.length > 0) {
-        const validPeriods = data.in_progress_periods.filter((period) => {
-          const start = new Date(period.start).getTime();
-          const end = new Date(period.end).getTime();
-          return !isNaN(start) && !isNaN(end) && start > 0 && end > 0;
+      if (memberData.in_progress_periods && memberData.in_progress_periods.length > 0) {
+        const activeData = [];
+
+        memberData.in_progress_periods.forEach((period) => {
+          try {
+            const startTime = new Date(period.start);
+            const endTime = new Date(period.end);
+
+            if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+              activeData.push({
+                x: startTime.getTime(),
+                y: memberName,
+                x2: endTime.getTime(),
+                task: period.task_name || "Task",
+                duration: period.duration_hours || 0,
+                status: period.status || "active",
+              });
+            }
+          } catch (error) {
+            console.warn(`Error processing active period for ${memberName}:`, error, period);
+          }
         });
 
-        if (validPeriods.length > 0) {
+        if (activeData.length > 0) {
           datasets.push({
-            label: `${name} - Active`,
-            data: validPeriods.map((period) => ({
-              x: [new Date(period.start).getTime(), new Date(period.end).getTime()],
-              y: name,
-              task: period.task_name || "Task",
-            })),
+            label: `${memberName} - Active`,
+            memberName: memberName,
+            data: activeData,
             backgroundColor: colors.active,
             borderColor: colors.active,
             borderWidth: 0,
-            barThickness: 20,
+            pointRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60); // hours
+              return Math.max(8, Math.min(20, duration * 3)); // Scale point size with duration
+            },
+            pointHoverRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60);
+              return Math.max(10, Math.min(25, duration * 3 + 2));
+            },
+            showLine: false,
           });
         }
       }
 
       // Downtime periods
-      if (data.downtime_periods && data.downtime_periods.length > 0) {
-        const validDowntime = data.downtime_periods.filter((period) => {
-          const start = new Date(period.start).getTime();
-          const end = new Date(period.end).getTime();
-          return !isNaN(start) && !isNaN(end) && start > 0 && end > 0;
+      if (memberData.downtime_periods && memberData.downtime_periods.length > 0) {
+        const downtimeData = [];
+
+        memberData.downtime_periods.forEach((period) => {
+          try {
+            const startTime = new Date(period.start);
+            const endTime = new Date(period.end);
+
+            if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+              // Choose color based on duration
+              let color = colors.downtime;
+              if (period.duration_hours < 2) {
+                color = colors.warning;
+              }
+
+              downtimeData.push({
+                x: startTime.getTime(),
+                y: memberName,
+                x2: endTime.getTime(),
+                duration: period.duration_hours || 0,
+                type: period.type || "downtime",
+                color: color,
+              });
+            }
+          } catch (error) {
+            console.warn(`Error processing downtime period for ${memberName}:`, error, period);
+          }
         });
 
-        if (validDowntime.length > 0) {
+        if (downtimeData.length > 0) {
           datasets.push({
-            label: `${name} - Downtime`,
-            data: validDowntime.map((period) => ({
-              x: [new Date(period.start).getTime(), new Date(period.end).getTime()],
-              y: name,
-              duration: period.duration_hours || 0,
-            })),
-            backgroundColor: colors.downtime,
+            label: `${memberName} - Downtime`,
+            memberName: memberName,
+            data: downtimeData,
+            backgroundColor: (context) => {
+              return context.raw?.color || colors.downtime;
+            },
             borderColor: colors.downtime,
             borderWidth: 0,
-            barThickness: 20,
+            pointRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60);
+              return Math.max(6, Math.min(18, duration * 2));
+            },
+            pointHoverRadius: (context) => {
+              const data = context.raw;
+              const duration = (data.x2 - data.x) / (1000 * 60 * 60);
+              return Math.max(8, Math.min(22, duration * 2 + 2));
+            },
+            showLine: false,
           });
         }
       }
 
-      // If no activity at all, create a placeholder
-      if (
-        (!data.in_progress_periods || data.in_progress_periods.length === 0) &&
-        (!data.downtime_periods || data.downtime_periods.length === 0)
-      ) {
+      // If no activity at all, show a placeholder
+      const hasActivity =
+        (memberData.in_progress_periods && memberData.in_progress_periods.length > 0) ||
+        (memberData.downtime_periods && memberData.downtime_periods.length > 0);
+
+      if (!hasActivity) {
+        const selectedDate = window.datePicker
+          ? datePicker.getSelectedDate()
+          : new Date().toISOString().split("T")[0];
+        const dayStart = new Date(`${selectedDate}T09:00:00`).getTime();
+
         datasets.push({
-          label: `${name} - No Activity`,
+          label: `${memberName} - No Data`,
+          memberName: memberName,
           data: [
             {
-              x: [defaultStart, defaultStart],
-              y: name,
+              x: dayStart,
+              y: memberName,
+              x2: dayStart,
+              type: "no_data",
             },
           ],
-          backgroundColor: "transparent",
+          backgroundColor: "#9ca3af",
+          borderColor: "#9ca3af",
           borderWidth: 0,
-          barThickness: 20,
+          pointRadius: 4,
+          showLine: false,
         });
       }
     });
 
+    console.log("Final datasets:", datasets);
     return datasets;
   },
 
@@ -258,18 +350,23 @@ window.charts = {
 
     const activeHours = metrics.total_active_hours || 0;
     const downtimeHours = metrics.total_downtime_hours || 0;
+    const expectedHours = metrics.expected_working_hours || 0;
+
+    console.log("Activity chart data:", { activeHours, downtimeHours, expectedHours });
+
+    // Create a doughnut chart showing active vs downtime vs remaining expected
+    const remainingHours = Math.max(0, expectedHours - activeHours - downtimeHours);
 
     this.instances.activity = new Chart(ctx, {
-      type: "bar",
+      type: "doughnut",
       data: {
-        labels: ["Active Hours", "Downtime Hours"],
+        labels: ["Active Hours", "Downtime Hours", "Remaining Expected"],
         datasets: [
           {
-            data: [activeHours, downtimeHours],
-            backgroundColor: ["#10b981", "#ef4444"],
-            borderWidth: 0,
-            borderRadius: 8,
-            barThickness: 80,
+            data: [activeHours, downtimeHours, remainingHours],
+            backgroundColor: ["#10b981", "#ef4444", "#6b7280"],
+            borderWidth: 2,
+            borderColor: "#ffffff",
           },
         ],
       },
@@ -277,7 +374,13 @@ window.charts = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: {
+            position: "bottom",
+            labels: {
+              padding: 20,
+              usePointStyle: true,
+            },
+          },
           tooltip: {
             backgroundColor: "rgba(30, 41, 59, 0.9)",
             titleColor: "#f1f5f9",
@@ -288,228 +391,17 @@ window.charts = {
             cornerRadius: 8,
             callbacks: {
               label: (context) => {
-                const value = context.parsed.y || 0;
-                const total = activeHours + downtimeHours;
+                const value = context.parsed || 0;
+                const total = activeHours + downtimeHours + remainingHours;
                 const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                 return `${context.label}: ${value.toFixed(1)}h (${percentage}%)`;
               },
             },
           },
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              display: true,
-              drawBorder: false,
-            },
-            ticks: {
-              callback: (value) => `${value}h`,
-            },
-          },
-          x: {
-            grid: {
-              display: false,
-              drawBorder: false,
-            },
-          },
-        },
+        cutout: "60%",
       },
     });
-  },
-
-  createTaskAgeChart(taskData) {
-    const ctx = document.getElementById("taskAgeChart");
-    if (!ctx) return;
-
-    if (this.instances.taskAge) {
-      this.instances.taskAge.destroy();
-    }
-
-    // Group tasks by age
-    const ageGroups = {
-      "0-24h": 0,
-      "1-3 days": 0,
-      "3-7 days": 0,
-      "7+ days": 0,
-    };
-
-    // Process task data here...
-
-    this.instances.taskAge = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: Object.keys(ageGroups),
-        datasets: [
-          {
-            label: "Tasks",
-            data: Object.values(ageGroups),
-            backgroundColor: "#4f46e5",
-            borderRadius: 8,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 1 },
-          },
-        },
-      },
-    });
-  },
-
-  createStatusChart(teamData) {
-    const ctx = document.getElementById("statusChart");
-    if (!ctx) return;
-
-    if (this.instances.status) {
-      this.instances.status.destroy();
-    }
-
-    const statusCounts = {
-      active: 0,
-      inactive: 0,
-      downtime: 0,
-    };
-
-    // Count statuses
-    Object.values(teamData).forEach((member) => {
-      if (member.total_active_hours > 0) {
-        statusCounts.active++;
-      } else {
-        statusCounts.inactive++;
-      }
-      if (member.total_downtime_hours > 2) {
-        statusCounts.downtime++;
-      }
-    });
-
-    this.instances.status = new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels: ["Active", "Inactive", "High Downtime"],
-        datasets: [
-          {
-            data: Object.values(statusCounts),
-            backgroundColor: ["#22c55e", "#6b7280", "#ef4444"],
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "right",
-            labels: {
-              padding: 10,
-              usePointStyle: true,
-            },
-          },
-        },
-      },
-    });
-  },
-
-  createPerformanceChart(performanceData) {
-    const ctx = document.getElementById("performanceChart");
-    if (!ctx) return;
-
-    if (this.instances.performance) {
-      this.instances.performance.destroy();
-    }
-
-    // Sample data - replace with actual performance metrics
-    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-    const efficiency = [85, 78, 82, 88, 75];
-
-    this.instances.performance = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: "Efficiency %",
-            data: efficiency,
-            borderColor: "#4f46e5",
-            backgroundColor: "rgba(79, 70, 229, 0.1)",
-            tension: 0.3,
-            fill: true,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              callback: (value) => value + "%",
-            },
-          },
-        },
-      },
-    });
-  },
-
-  zoomTimeline(range) {
-    if (!this.instances.timeline) return;
-
-    const chart = this.instances.timeline;
-    const selectedDate = datePicker.getSelectedDate();
-    let min, max;
-
-    switch (range) {
-      case "1h":
-        const now = new Date();
-        min = new Date(selectedDate + "T" + (now.getHours() - 1) + ":00:00").getTime();
-        max = new Date(selectedDate + "T" + now.getHours() + ":00:00").getTime();
-        break;
-      case "4h":
-        const currentHour = new Date().getHours();
-        min = new Date(selectedDate + "T" + Math.max(9, currentHour - 4) + ":00:00").getTime();
-        max = new Date(selectedDate + "T" + Math.min(17, currentHour + 1) + ":00:00").getTime();
-        break;
-      default:
-        min = new Date(selectedDate + "T09:00:00").getTime();
-        max = new Date(selectedDate + "T17:00:00").getTime();
-    }
-
-    chart.options.scales.x.min = min;
-    chart.options.scales.x.max = max;
-    chart.update();
-
-    // Update button states
-    document.querySelectorAll(".chart-actions .chart-btn").forEach((btn) => {
-      btn.classList.remove("active");
-    });
-    event.target.classList.add("active");
-  },
-
-  updateAll(data) {
-    if (data.detailed_data) {
-      this.createTimelineChart(data.detailed_data);
-      this.createStatusChart(data.detailed_data);
-      this.createMemberStatusChart(data.detailed_data);
-      this.createActivityTrendChart(data.detailed_data);
-    }
-
-    if (data.team_metrics) {
-      this.createActivityChart(data.team_metrics);
-    }
   },
 
   createMemberStatusChart(detailedData) {
@@ -523,11 +415,13 @@ window.charts = {
     // Prepare data for horizontal bar chart
     const members = Object.entries(detailedData).map(([name, data]) => ({
       name,
+      active: data.total_active_hours || 0,
       downtime: data.total_downtime_hours || 0,
+      tasks: data.total_tasks || 0,
     }));
 
-    // Sort by downtime
-    members.sort((a, b) => b.downtime - a.downtime);
+    // Sort by total activity (active hours - downtime hours)
+    members.sort((a, b) => b.active - b.downtime - (a.active - a.downtime));
 
     this.instances.memberStatus = new Chart(ctx, {
       type: "bar",
@@ -535,16 +429,16 @@ window.charts = {
         labels: members.map((m) => m.name),
         datasets: [
           {
+            label: "Active Hours",
+            data: members.map((m) => m.active),
+            backgroundColor: "#10b981",
+            borderRadius: 4,
+          },
+          {
             label: "Downtime Hours",
             data: members.map((m) => m.downtime),
-            backgroundColor: (context) => {
-              const value = context.parsed.x || context.parsed.y;
-              if (value >= 6) return "#000000";
-              if (value >= 4) return "#ef4444";
-              if (value >= 3) return "#f59e0b";
-              return "#22c55e";
-            },
-            borderWidth: 0,
+            backgroundColor: "#ef4444",
+            borderRadius: 4,
           },
         ],
       },
@@ -553,11 +447,15 @@ window.charts = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: {
+            position: "top",
+          },
           tooltip: {
             callbacks: {
-              label: (context) => {
-                return `Downtime: ${utils.formatDuration(context.parsed.x)}`;
+              afterBody: (context) => {
+                const memberIndex = context[0].dataIndex;
+                const member = members[memberIndex];
+                return `Tasks: ${member.tasks}`;
               },
             },
           },
@@ -565,7 +463,7 @@ window.charts = {
         scales: {
           x: {
             beginAtZero: true,
-            max: 8,
+            stacked: false,
             ticks: {
               callback: (value) => value + "h",
             },
@@ -574,53 +472,57 @@ window.charts = {
             },
           },
           y: {
-            grid: { display: false },
+            stacked: false,
+            grid: {
+              display: false,
+            },
           },
         },
       },
     });
   },
 
-  createActivityTrendChart(detailedData) {
-    const ctx = document.getElementById("activityTrendChart");
+  createStatusChart(detailedData) {
+    const ctx = document.getElementById("statusChart");
     if (!ctx) return;
 
-    if (this.instances.activityTrend) {
-      this.instances.activityTrend.destroy();
+    if (this.instances.status) {
+      this.instances.status.destroy();
     }
 
-    // Create hourly distribution data
-    const hourlyData = new Array(24).fill(0);
+    const members = Object.keys(detailedData || {});
+    if (members.length === 0) {
+      ctx.parentElement.innerHTML = '<div class="no-data-message">No status data available</div>';
+      return;
+    }
 
-    Object.values(detailedData).forEach((member) => {
-      if (member.in_progress_periods) {
-        member.in_progress_periods.forEach((period) => {
-          const startHour = new Date(period.start).getHours();
-          const endHour = new Date(period.end).getHours();
+    let goodCount = 0,
+      warningCount = 0,
+      criticalCount = 0;
 
-          for (let h = startHour; h <= endHour && h < 24; h++) {
-            hourlyData[h]++;
-          }
-        });
+    members.forEach((member) => {
+      const memberData = detailedData[member];
+      const totalDowntime = memberData.total_downtime_hours || 0;
+
+      if (totalDowntime >= 4) {
+        criticalCount++;
+      } else if (totalDowntime >= 2) {
+        warningCount++;
+      } else {
+        goodCount++;
       }
     });
 
-    // Focus on work hours (9-17)
-    const workHours = hourlyData.slice(9, 18);
-    const labels = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`);
-
-    this.instances.activityTrend = new Chart(ctx, {
-      type: "line",
+    this.instances.status = new Chart(ctx, {
+      type: "pie",
       data: {
-        labels: labels,
+        labels: ["Good (< 2h downtime)", "Warning (2-4h downtime)", "Critical (4h+ downtime)"],
         datasets: [
           {
-            label: "Active Members",
-            data: workHours,
-            borderColor: "#4f46e5",
-            backgroundColor: "rgba(79, 70, 229, 0.1)",
-            tension: 0.3,
-            fill: true,
+            data: [goodCount, warningCount, criticalCount],
+            backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
+            borderWidth: 2,
+            borderColor: "#ffffff",
           },
         ],
       },
@@ -628,7 +530,70 @@ window.charts = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: {
+            position: "bottom",
+            labels: {
+              padding: 15,
+              usePointStyle: true,
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const value = context.raw;
+                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                return `${context.label}: ${value} (${percentage}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
+  },
+
+  createTaskDistributionChart(detailedData) {
+    const ctx = document.getElementById("taskDistributionChart");
+    if (!ctx) return;
+
+    if (this.instances.taskDistribution) {
+      this.instances.taskDistribution.destroy();
+    }
+
+    const members = Object.entries(detailedData).map(([name, data]) => ({
+      name,
+      activeTasks: data.active_tasks || 0,
+      totalTasks: data.total_tasks || 0,
+    }));
+
+    members.sort((a, b) => b.totalTasks - a.totalTasks);
+
+    this.instances.taskDistribution = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: members.map((m) => m.name),
+        datasets: [
+          {
+            label: "Active Tasks",
+            data: members.map((m) => m.activeTasks),
+            backgroundColor: "#3b82f6",
+            borderRadius: 4,
+          },
+          {
+            label: "Total Tasks",
+            data: members.map((m) => m.totalTasks),
+            backgroundColor: "#e5e7eb",
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top",
+          },
         },
         scales: {
           y: {
@@ -642,9 +607,76 @@ window.charts = {
     });
   },
 
+  updateAll(data) {
+    console.log("Updating all charts with data:", data);
+
+    if (data.detailed_data) {
+      this.createTimelineChart(data.detailed_data);
+      this.createStatusChart(data.detailed_data);
+      this.createMemberStatusChart(data.detailed_data);
+      this.createTaskDistributionChart(data.detailed_data);
+    }
+
+    if (data.team_metrics) {
+      this.createActivityChart(data.team_metrics);
+    }
+  },
+
+  zoomTimeline(range) {
+    if (!this.instances.timeline) return;
+
+    const chart = this.instances.timeline;
+    const selectedDate = window.datePicker
+      ? datePicker.getSelectedDate()
+      : new Date().toISOString().split("T")[0];
+    let min, max;
+
+    switch (range) {
+      case "hour":
+        const now = new Date();
+        min = new Date(
+          `${selectedDate}T${(now.getHours() - 1).toString().padStart(2, "0")}:00:00`
+        ).getTime();
+        max = new Date(
+          `${selectedDate}T${now.getHours().toString().padStart(2, "0")}:59:59`
+        ).getTime();
+        break;
+      case "morning":
+        min = new Date(`${selectedDate}T09:00:00`).getTime();
+        max = new Date(`${selectedDate}T12:00:00`).getTime();
+        break;
+      case "afternoon":
+        min = new Date(`${selectedDate}T13:00:00`).getTime();
+        max = new Date(`${selectedDate}T18:00:00`).getTime();
+        break;
+      default:
+        min = new Date(`${selectedDate}T09:00:00`).getTime();
+        max = new Date(`${selectedDate}T18:00:00`).getTime();
+    }
+
+    chart.options.scales.x.min = min;
+    chart.options.scales.x.max = max;
+    chart.update();
+
+    // Update button states
+    document.querySelectorAll(".chart-actions .chart-btn").forEach((btn) => {
+      btn.classList.remove("active");
+    });
+    if (event && event.target) {
+      event.target.classList.add("active");
+    }
+  },
+
   resize() {
     Object.values(this.instances).forEach((chart) => {
       if (chart) chart.resize();
     });
+  },
+
+  destroy() {
+    Object.values(this.instances).forEach((chart) => {
+      if (chart) chart.destroy();
+    });
+    this.instances = {};
   },
 };
