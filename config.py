@@ -33,6 +33,6 @@ class Config:
     CRITICAL_DOWNTIME_HOURS = 4
     
     # Auto-refresh interval (minutes)
-    AUTO_REFRESH_INTERVAL = 5
+    AUTO_REFRESH_INTERVAL = 60
 
 

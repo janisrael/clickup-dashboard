@@ -1,21 +1,36 @@
 <div class="charts-section">
     <div class="grid-2-col">
-        <div class="chart-container">
+        <!-- Main Timeline Chart -->
+        <div class="chart-container full-width">
             <div class="chart-header">
                 <div class="chart-title">
                     <i class="fas fa-chart-gantt"></i>
                     Team Activity Timeline
+                    <span class="timeline-date" id="timelineDate">Today</span>
                 </div>
                 <div class="chart-actions">
-                    <button class="chart-btn" onclick="window.charts.zoomTimeline('hour')">Hour</button>
-                    <button class="chart-btn active" onclick="window.charts.zoomTimeline('day')">Day</button>
+                    <button class="chart-btn" onclick="window.charts.zoomTimeline('hour')">
+                        <i class="fas fa-clock"></i> Hour
+                    </button>
+                    <button class="chart-btn" onclick="window.charts.zoomTimeline('morning')">
+                        <i class="fas fa-sun"></i> Morning
+                    </button>
+                    <button class="chart-btn" onclick="window.charts.zoomTimeline('afternoon')">
+                        <i class="fas fa-moon"></i> Afternoon
+                    </button>
+                    <button class="chart-btn active" onclick="window.charts.zoomTimeline('day')">
+                        <i class="fas fa-calendar-day"></i> Full Day
+                    </button>
                 </div>
             </div>
             <div class="chart-wrapper timeline">
                 <canvas id="timelineChart"></canvas>
             </div>
         </div>
+    </div>
 
+    <div class="grid-3-col">
+        <!-- Activity vs Downtime Chart -->
         <div class="chart-container">
             <div class="chart-header">
                 <div class="chart-title">
@@ -27,8 +42,93 @@
                 <canvas id="activityChart"></canvas>
             </div>
         </div>
-        
+
+        <!-- Team Status Distribution -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="fas fa-users"></i>
+                    Team Status
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Task Distribution -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="fas fa-tasks"></i>
+                    Task Distribution
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="taskDistributionChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <!-- Additional charts can be added here -->
+    <!-- Member Performance Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fas fa-chart-bar"></i>
+                Member Performance Overview
+            </div>
+            <div class="chart-actions">
+                <button class="chart-btn active" onclick="toggleMemberView('hours')">
+                    <i class="fas fa-clock"></i> Hours
+                </button>
+                <button class="chart-btn" onclick="toggleMemberView('tasks')">
+                    <i class="fas fa-tasks"></i> Tasks
+                </button>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="memberStatusChart"></canvas>
+        </div>
+    </div>
 </div>
+
+<style>
+.chart-container.full-width {
+    grid-column: 1 / -1;
+}
+
+.timeline-date {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    margin-left: 8px;
+}
+
+.chart-wrapper.timeline {
+    height: 450px;
+}
+
+.no-data-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    text-align: center;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+}
+
+.chart-actions .chart-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+}
+
+.chart-actions .chart-btn i {
+    font-size: 0.7rem;
+}
+</style>
