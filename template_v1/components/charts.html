@@ -1,0 +1,34 @@
+<div class="charts-section">
+    <div class="grid-2-col">
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="fas fa-chart-gantt"></i>
+                    Team Activity Timeline
+                </div>
+                <div class="chart-actions">
+                    <button class="chart-btn" onclick="window.charts.zoomTimeline('hour')">Hour</button>
+                    <button class="chart-btn active" onclick="window.charts.zoomTimeline('day')">Day</button>
+                </div>
+            </div>
+            <div class="chart-wrapper timeline">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Active vs Downtime
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Additional charts can be added here -->
+</div>
