@@ -17,7 +17,7 @@ class Config:
     LUNCH_BREAK_END = 12.5
     WORKING_HOURS_PER_DAY = 7.5
     WORKDAY_START_HOUR = int(os.getenv('WORKDAY_START_HOUR', 9))
-    TARGET_MEMBERS = ['Jan']
+    TARGET_MEMBERS = ['Arif']
 
 
 

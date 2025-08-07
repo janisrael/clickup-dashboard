@@ -6,6 +6,11 @@
     <title>SourceSelect Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Add to <head> section -->
+<link href="{{ url_for('static', filename='css/projects.css') }}" rel="stylesheet">
+
+<!-- Add before closing </body> tag -->
+
     <style>
         /* Enhanced CSS with better structure */
         :root {
@@ -1574,5 +1579,6 @@
             window.dashboard = new EnhancedDashboard();
         });
     </script>
+    <script src="{{ url_for('static', filename='js/dashboard/projects.js') }}"></script>
 </body>
 </html>

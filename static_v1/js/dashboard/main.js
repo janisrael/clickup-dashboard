@@ -474,7 +474,10 @@ window.dashboard = {
 
     switch (tabName) {
       case "projects":
-        // Load projects data
+        // Initialize project tracker when projects tab is loaded
+        if (window.projectTracker) {
+          await window.projectTracker.loadProjects();
+        }
         break;
       case "websites":
         // Load websites data
