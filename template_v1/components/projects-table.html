@@ -1,30 +1,107 @@
-<div class="card">
+<!-- Enhanced Project Tracker Component -->
+<!-- Alert Cards Section -->
+<div class="project-alerts">
+    <div class="alert-cards">
+        <div class="alert-card overdue" id="overdueCard">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="alert-content">
+                    <h3>Overdue Tasks</h3>
+                    <span class="alert-count" id="overdueCount">0</span>
+                </div>
+            </div>
+            <div class="alert-details" id="overdueDetails">
+                <p>No overdue tasks</p>
+            </div>
+        </div>
+
+        <div class="alert-card due" id="dueCard">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="alert-content">
+                    <h3>Due Today</h3>
+                    <span class="alert-count" id="dueCount">0</span>
+                </div>
+            </div>
+            <div class="alert-details" id="dueDetails">
+                <p>No tasks due today</p>
+            </div>
+        </div>
+
+        <div class="alert-card upcoming" id="upcomingCard">
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="alert-content">
+                    <h3>Upcoming</h3>
+                    <span class="alert-count" id="upcomingCount">0</span>
+                </div>
+            </div>
+            <div class="alert-details" id="upcomingDetails">
+                <p>No upcoming deadlines</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Timeline Graph Section -->
+<div class="card project-timeline-card">
     <div class="card-header">
         <div class="card-title">
             <i class="fas fa-project-diagram"></i>
+            Project Timeline
+        </div>
+        <div class="timeline-controls">
+            <button class="chart-btn secondary" onclick="projectTracker.zoomTimeline('1w')">1W</button>
+            <button class="chart-btn secondary" onclick="projectTracker.zoomTimeline('1m')">1M</button>
+            <button class="chart-btn secondary active" onclick="projectTracker.zoomTimeline('3m')">3M</button>
+            <button class="chart-btn secondary" onclick="projectTracker.zoomTimeline('6m')">6M</button>
+        </div>
+    </div>
+    <div class="timeline-container">
+        <canvas id="projectTimelineChart" width="400" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Project List with Enhanced Cards -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-list"></i>
             Active Projects
         </div>
-        <button class="chart-btn" onclick="window.dashboard.showAddProjectModal()">
-            <i class="fas fa-plus"></i> Add Project
-        </button>
+        <div class="project-actions">
+            <button class="chart-btn secondary" onclick="projectTracker.toggleView('grid')">
+                <i class="fas fa-th"></i>
+            </button>
+            <button class="chart-btn secondary" onclick="projectTracker.toggleView('list')">
+                <i class="fas fa-list"></i>
+            </button>
+            <button class="chart-btn" onclick="projectTracker.showAddProjectModal()">
+                <i class="fas fa-plus"></i> Add Project
+            </button>
+        </div>
     </div>
-    <div class="table-wrapper">
-        <table class="project-table">
-            <thead>
-                <tr>
-                    <th>Project Name</th>
-                    <th>Client</th>
-                    <th>Status</th>
-                    <th>Start Date</th>
-                    <th>Deadline</th>
-                    <th>Assignee</th>
-                    <th>Progress</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="projectsTableBody">
-                <!-- Projects will be populated here -->
-            </tbody>
-        </table>
+    
+    <div class="projects-container" id="projectsContainer">
+        <!-- Projects will be populated here -->
+    </div>
+</div>
+
+<!-- Project Details Modal -->
+<div class="modal" id="projectDetailsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalProjectTitle">Project Details</h2>
+            <button class="modal-close" onclick="projectTracker.closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalProjectBody">
+            <!-- Project details will be populated here -->
+        </div>
     </div>
 </div>
