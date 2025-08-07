@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 ClickUp Team Performance Dashboard v2</title>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>🎯 ClickUp Team Performance Dashboard v2</h1>
+                <div class="header-controls">
+                    <div class="date-info">
+                        <span id="currentDate">Loading...</span>
+                        <span id="lastUpdate">Last updated: --:--</span>
+                    </div>
+                    <button id="refreshBtn" class="btn btn-primary">
+                        <span class="btn-icon">🔄</span>
+                        Refresh
+                    </button>
+                    <button id="exportBtn" class="btn btn-secondary">
+                        <span class="btn-icon">📥</span>
+                        Export
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="error-state" style="display: none;">
+            <div class="error-content">
+                <h3>⚠️ Error Loading Data</h3>
+                <p id="errorMessage">Unable to load dashboard data</p>
+                <button id="retryBtn" class="btn btn-primary">Try Again</button>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div id="dashboardGrid" class="dashboard-grid" style="display: none;">
+            
+            <!-- 1. Main Timeline (Top - Spanning 2 columns) -->
+            <div class="chart-container timeline-container">
+                <div class="chart-header">
+                    <h2>📊 Team Activity Timeline</h2>
+                    <div class="timeline-legend">
+                        <span class="legend-item">
+                            <span class="legend-color active"></span>
+                            🟢 Active Period
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color warning"></span>
+                            🟡 Moderate Downtime (3-4h)
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color danger"></span>
+                            🔴 Severe Downtime (4-6h)
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color critical"></span>
+                            ⚫ Critical Downtime (6+h)
+                        </span>
+                    </div>
+                </div>
+                <div class="chart-content">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 2. Status Bars (Middle Left) -->
+            <div class="chart-container status-container">
+                <div class="chart-header">
+                    <h3>⚡ Current Member Status</h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 3. Productivity Pie (Middle Right) -->
+            <div class="chart-container productivity-container">
+                <div class="chart-header">
+                    <h3>🎯 Team Status</h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="productivityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 4. Hourly Activity Heatmap (Bottom Left) -->
+            <div class="chart-container heatmap-container">
+                <div class="chart-header">
+                    <h3>📈 Hourly Activity Distribution</h3>
+                </div>
+                <div class="chart-content">
+                    <div id="heatmapGrid" class="heatmap-grid"></div>
+                </div>
+            </div>
+
+            <!-- 5. Statistics Panel (Bottom Right) -->
+            <div class="chart-container stats-container">
+                <div class="chart-header">
+                    <h3>📊 Team Statistics</h3>
+                </div>
+                <div class="chart-content">
+                    <div id="statsPanel" class="stats-panel">
+                        <!-- Statistics will be populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Alerts Panel (Bottom - Spanning 2 columns) -->
+            <div class="chart-container alerts-container">
+                <div class="chart-header">
+                    <h3>🚨 Priority Alerts</h3>
+                </div>
+                <div class="chart-content">
+                    <div id="alertsPanel" class="alerts-panel">
+                        <!-- Alerts will be populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+        // Initialize dashboard when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboardV2.init();
+        });
+    </script>
+</body>
+</html>

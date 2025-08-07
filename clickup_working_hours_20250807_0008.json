@@ -1,0 +1,151 @@
+{
+  "timestamp": "2025-08-07T00:08:52.639047",
+  "date": "2025-08-07",
+  "analysis_time": "00:08:52",
+  "working_hours_config": {
+    "start_hour": 9,
+    "end_hour": 17,
+    "lunch_start": 12,
+    "lunch_end": 12.5,
+    "daily_hours": 7.5
+  },
+  "members_analyzed": 8,
+  "members_with_downtime": 0,
+  "downtime_members": [],
+  "detailed_data": {
+    "Rick Schmaltz": {
+      "in_progress_periods": [],
+      "downtime_periods": []
+    },
+    "Kendra Richards": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Stickers",
+          "task_id": "86aatcn9c",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Tea Towels",
+          "task_id": "86aanxp7v",
+          "duration_hours": -8.852044709166666
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Tricia Kennedy": {
+      "in_progress_periods": [],
+      "downtime_periods": []
+    },
+    "Calum Sproat-Panabaker": {
+      "in_progress_periods": [],
+      "downtime_periods": []
+    },
+    "Sean Coulombe": {
+      "in_progress_periods": [],
+      "downtime_periods": []
+    },
+    "Arif": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Content Integration",
+          "task_id": "86aap08kx",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Design And Implementation",
+          "task_id": "86aap08cj",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "create responsive content sizes",
+          "task_id": "86aamn6n2",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "create __pre variables and values",
+          "task_id": "86aamn6cw",
+          "duration_hours": -8.852044709166666
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Wiktor": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Changes in the Back part of Truck",
+          "task_id": "86aatgved",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Responsivines",
+          "task_id": "86aaedw2j",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Revision & Corrections",
+          "task_id": "86aa8mjf6",
+          "duration_hours": -8.852044709166666
+        }
+      ],
+      "downtime_periods": []
+    },
+    "Jan": {
+      "in_progress_periods": [
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Organization payment",
+          "task_id": "86aaazhku",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "MileStone(Organizer side)",
+          "task_id": "86aa5tz1e",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "MileStone(P1 MVP)",
+          "task_id": "86aa5rfuc",
+          "duration_hours": -8.852044709166666
+        },
+        {
+          "start": "2025-08-07 09:00:00",
+          "end": "2025-08-07 00:08:52.639047",
+          "task_name": "Add Delete ticket capability",
+          "task_id": "86a9z9qpf",
+          "duration_hours": -8.852044709166666
+        }
+      ],
+      "downtime_periods": []
+    }
+  },
+  "team_metrics": {
+    "total_active_hours": -115.07658121916666,
+    "total_downtime_hours": 0,
+    "team_utilization": -191.79430203194443,
+    "total_possible_hours": 60.0,
+    "currently_inactive": []
+  }
+}
